@@ -1,0 +1,22 @@
+{
+	"name": "core-lib",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"svelte": "./src/lib.js",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build"
+	},
+	"devDependencies": {
+		"@sveltejs/vite-plugin-svelte": "^2.4",
+		"svelte": "^3.49.0",
+		"vite": "^4.3"
+	},
+	"dependencies": {
+		"fire": "npm:fire-lib-js@^0.2.0"
+	},
+	"exports": {
+		".": "./src/lib.js"
+	}
+}

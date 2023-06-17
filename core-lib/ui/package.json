@@ -1,0 +1,23 @@
+{
+	"name": "core-lib-ui",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"devDependencies": {
+		"svelte": "^3.49.0"
+	},
+	"dependencies": {
+		"fire": "npm:fire-lib-js@^0.2.0",
+		"core-lib": "file:../js"
+	},
+	"exports": {
+		"./add-btn": "./src/add-btn.svelte",
+		"./back-btn": "./src/back-btn.svelte",
+		"./blue-form-btn": "./src/blue-form-btn.svelte",
+		"./close-btn": "./src/close-btn.svelte",
+		"./contextmenu": "./src/contextmenu.svelte",
+		"./form-input": "./src/form-input.svelte",
+		"./menu-btn": "./src/menu-btn.svelte",
+		"./search": "./src/search.svelte"
+	}
+}

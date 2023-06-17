@@ -1,0 +1,23 @@
+[package]
+name = "core-lib"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+client = []
+server = []
+i-am-core = []
+
+[dependencies]
+tokio = { version = "1.0", features = ["rt-multi-thread", "sync"] }
+bytes = "1.0"
+postgres = { package = "fire-postgres", version = "0.1", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+crypto = { package = "fire-crypto", version = "0.3", features = ["b64", "serde"] }
+fire = { package = "fire-http", version = "0.3.2" }
+toml = "0.7"
+hyper = { version = "0.14", features = ["client"] }
+pin-project-lite = "0.2"
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "sync", "io-util"] }
