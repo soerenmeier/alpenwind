@@ -1,13 +1,12 @@
 <script>
 	export let src;
+	export let alt = 'Cover';
 	export let percent = 0;
 </script>
 
-<div
-	class="cover"
-	style="--poster: url('{src.replace(/'/, '%27')}'); --percent: {percent * 100}%"
-	on:click
-></div>
+<figure class="cover" style:--percent={percent} on:click>
+	<img {src} {alt}>
+</figure>
 
 <style>
 	.cover {
@@ -17,13 +16,14 @@
 		background-repeat: no-repeat;
 		background-size: cover;
 		background-position: center;
+		aspect-ratio: 0.63;
 	}
 
-	.cover::before {
-		content: "";
+	img {
 		display: block;
 		width: 100%;
-		padding-bottom: 158.73%;
+		height: 100%;
+		object-fit: cover;
 	}
 
 	.cover::after {
@@ -31,7 +31,7 @@
 		position: absolute;
 		bottom: 0;
 		height: 3px;
-		width: var(--percent);
+		width: calc(var(--percent) * 100%);
 		background-color: var(--red);
 	}
 </style>

@@ -16,13 +16,124 @@ class Entries {
 	}
 
 	search(val) {
+		const filter = new SearchFilter(val);
+
 		return this.list.map(e => {
-			const score = e.match(val);
+			const score = filter.match(e);
 			return [score, e];
 		})
 			.filter(([score, e]) => score !== 0)
-			.sort(([aScore, ae], [bScore, be]) => sortToHigher(aScore, bScore))
+			.sort((a, b) => {
+				return filter.sort(a, b);
+			})
 			.map(([score, e]) => e);
+	}
+}
+
+class SearchFilter {
+	// we need to parse filter and ordering
+	// kind:movie
+	// k:m
+
+	// order:year
+	// o:y
+	// order:year:asc
+	constructor(s) {
+		this.raw = s;
+
+		// Movie|Series|null
+		this.kind = null;
+		// { field: Year|Updated, order: Asc|Desc }|null
+		this.order = null;
+
+		this.text = '';
+
+		this._parse(s);
+	}
+
+	match(e) {
+		// lets first apply the filter
+		if (this.kind && e.kind !== this.kind)
+			return 0;
+
+		if (!this.text)
+			return 1;
+
+		return e.match(this.text);
+	}
+
+	sort([aScore, ae], [bScore, be]) {
+		if (!this.order)
+			return sortToHigher(aScore, bScore);
+
+		let prevOrder = 0;
+
+		const { field, order } = this.order;
+		let av = null;
+		let bv = null;
+		if (field === 'Year') {
+			if (ae.kind === 'Movie' && be.kind === 'Movie') {
+				av = ae.data.year();
+				bv = be.data.year();
+			}
+		} else if (field === 'Updated') {
+			av = ae.updatedOn().time;
+			bv = be.updatedOn().time;
+		}
+
+		if (av && bv) {
+			if (order === 'Asc')
+				prevOrder = sortToHigher(av, bv);
+			else
+				prevOrder = sortToLower(av, bv);
+		}
+
+		if (prevOrder !== 0)
+			return prevOrder;
+
+		return sortToHigher(aScore, bScore);
+	}
+
+	_parse(s) {
+		const text = [];
+
+		for (const word of s.split(' ')) {
+			const filter = word.toLowerCase().split(':');
+			if (filter.length === 1 || filter.some(f => !f.length)) {
+				text.push(word);
+				continue
+			}
+
+			const k = filter[0];
+			const v = filter[1];
+			let add = filter[2] ?? null;
+
+			switch (k) {
+				case 'k':
+				case 'kind':
+					if (v.startsWith('m'))
+						this.kind = 'Movie';
+					else if (v.startsWith('s'))
+						this.kind = 'Series';
+					console.log('invalid value for kind', v);
+					break;
+
+				case 'o':
+				case 'order':
+					if (add && add.startsWith('a'))
+						add = 'Asc';
+					else
+						add = 'Desc';
+
+					if (v.startsWith('y'))
+						this.order = { field: 'Year', order: add };
+					else if (v.startsWith('u'))
+						this.order = { field: 'Updated', order: add };
+					break;
+			}
+		}
+
+		this.text = text.join(' ');
 	}
 }
 
@@ -228,6 +339,10 @@ export class MovieEntry {
 
 	title() {
 		return this.inner.title();
+	}
+
+	year() {
+		return this.inner.year;
 	}
 
 	currentShortTitle() {

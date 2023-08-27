@@ -1,5 +1,5 @@
 <script>
-	import { afterUpdate } from 'svelte';
+	import { tick } from 'svelte';
 	import { timeout } from 'fire/util.js';
 	import { stream } from './lib/api.js';
 	import { loadEntries } from './lib/data.js';
@@ -10,40 +10,71 @@
 	import BackBtn from 'core-lib-ui/back-btn';
 	import Search from 'core-lib-ui/search';
 
+	let searchValue = '';
+	export { searchValue as search };
+	let initialSearchValue = searchValue;
+
 	let contEl = null;
 
 	let entries = null;
 	let searchEntries = null;
 	const groups = [
-		['watchLater', 'Später aluege'],
-		['newest', 'Neu hinzuegfüegt'],
-		['series', 'Serien'],
-		['movies', 'Filme']
+		['watchLater', false, 'Später aluege'],
+		['newest', true, 'Neu hinzuegfüegt'],
+		['series', true, 'Serien'],
+		['movies', true, 'Filme']
 	];
-
-	let scrollSet = 0;// 0: no, 1: ready, 2: set
-
-	let searchValue = router.currentState().searchValue ?? '';
-	let scrollTop = router.currentState().scrollTop ?? 0;
 
 	async function load() {
 		const entrs = await loadEntries(session.getValid().token);
 		entries = entrs.toDashboard();
 
 		searchChange(searchValue);
-
-		scrollSet = 1;
 	}
 	load();
 
 	/* Events */
+	let tooltipOpen = false;
+	function onTooltipClick(e) {
+		tooltipOpen = !tooltipOpen;
+	}
+
+	async function clickViewMore(e, group) {
+		e.preventDefault();
+		e.stopPropagation();
+
+		if (group === 'newest') {
+			searchValue = 'order:update';
+		} else {
+			searchValue = 'kind:' + group;
+		}
+
+		// because we wait for the next tick we make sure
+		// that the history state was pushed before scrolling to the top
+		// meaning if you go back the correct scroll position will be shown
+		await tick();
+
+		window.scrollTo({
+			top: 0
+		});
+	}
+
 	function searchChange(val) {
 		if (!entries)
 			return;
 
-		const s = router.currentState();
-		s.searchValue = searchValue;
-		router.replaceState(s);
+		const nReq = router.currentReq().clone();
+		nReq.search.set('search', val);
+
+		// if there we didn't do any searching already
+		// push a new page with the search
+		// else just replace the search parameter
+		if (!initialSearchValue && val) {
+			router.pushReq(nReq);
+			initialSearchValue = val;
+		} else if (initialSearchValue) {
+			router.replaceReq(nReq);
+		}
 
 		if (val) {
 			searchEntries = entries.inner.search(val);
@@ -60,7 +91,22 @@
 		<BackBtn href="/" onlyHref={true} />
 
 		<div class="center">
-			<Search bind:value={searchValue} />
+			<Search bind:value={searchValue}>
+				<button class="tooltip" on:click={onTooltipClick}>i</button>
+				<div class="tooltip-box" class:open={tooltipOpen}>
+					<p>
+						<strong>Filter nach typ:</strong><br>
+						Nach film: <i>kind:movie</i> oder <i>k:m</i><br>
+						Nach Serie: <i>kind:series</i> oder <i>k:s</i>
+					</p>
+					<p>
+						<strong>Sortieren:</strong><br>
+						Nach Jahr: <i>order:year</i> oder <i>o:y</i><br>
+						Nach hochladedatum: <i>order:update</i> oder <i>o:u</i><br>
+						Richtung ändern: <i>order:year:asc</i>
+					</p>
+				</div>
+			</Search>
 		</div>
 	</header>
 
@@ -74,6 +120,7 @@
 					<a href="/cinema/watch/{entry.id()}" class="entry">
 						<Cover
 							src={entry.poster()}
+							alt={entry.title()}
 							percent={entry.percent()}
 						/>
 						<div class="over">
@@ -92,6 +139,7 @@
 				<div class="hero-entry">
 					<Cover
 						src={lastWatched.fullPoster()}
+						alt={lastWatched.title()}
 						percent={lastWatched.percent()}
 						on:click={() => router.open(`/cinema/watch/${lastWatched.id()}`)}
 					/>
@@ -108,17 +156,18 @@
 			<div class="hero-placeholder"></div>
 		{/if}
 
-		{#each groups as [group, groupTitle]}
-			{@const list = entries[group]}
+		{#each groups as [group, filterAble, groupTitle]}
+			{@const list = filterAble ? entries[group].slice(0, 6) : entries[group]}
 			{#if list.length > 0}
 				<section>
 					<h2>{groupTitle}</h2>
 
-					<div class="list">
+					<div class="list" class:filter-able={filterAble}>
 						{#each list as entry}
 							<a href="/cinema/watch/{entry.id()}" class="entry">
 								<Cover
 									src={entry.poster()}
+									alt={entry.title()}
 									percent={entry.percent()}
 								/>
 								<div class="over">
@@ -126,6 +175,15 @@
 								</div>
 							</a>
 						{/each}
+						{#if filterAble}
+							<a
+								href="/cinema/?search=kind%3A{group}"
+								class="viewmore"
+								on:click={e => clickViewMore(e, group)}
+							>
+								<h4>Aui azeige</h4>
+							</a>
+						{/if}
 					</div>
 				</section>
 			{/if}
@@ -133,7 +191,7 @@
 	{/if}
 </div>
 
-<style>
+<style lang="scss">
 	#cinema {
 		min-height: 100vh;
 	}
@@ -154,6 +212,46 @@
 	.center {
 		display: flex;
 		justify-content: center;
+	}
+
+	.tooltip {
+		position: absolute;
+		top: calc(50% - 12px);
+		right: 10px;
+		width: 24px;
+		height: 24px;
+		background-color: transparent;
+		outline: none;
+		border: 1px solid var(--dark-border-color);
+		border-radius: 50%;
+		font-size: 16px;
+		cursor: pointer;
+		font-family: serif;
+	}
+
+	.tooltip-box {
+		position: absolute;
+		display: none;
+		top: calc(100% + 5px);
+		width: 100%;
+		background-color: var(--gray);
+		border-radius: 8px;
+		border: 1px solid var(--dark-border-color);
+		padding: 9px 15px;
+
+		&.open {
+			display: block;
+		}
+
+		p {
+			margin-bottom: 10px;
+			color: #a3a3a3;
+		}
+
+		i, strong {
+			color: white;
+			font-style: normal;
+		}
 	}
 
 	.hero {
@@ -242,6 +340,23 @@
 		opacity: 1;
 	}
 
+	.viewmore {
+		aspect-ratio: 0.63;
+		display: flex;
+		padding: 10px;
+		align-items: center;
+		justify-content: center;
+		background-color: rgb(172 34 62 / 60%);
+		text-decoration: none;
+		text-align: center;
+
+		transition: background-color ease .2s;
+
+		&:hover {
+			background-color: var(--red);
+		}
+	}
+
 	h4 {
 		font-size: 20px;
 		font-weight: 600;
@@ -260,13 +375,13 @@
 		.list {
 			grid-template-columns: repeat(6, 1fr);
 		}
+
+		.filter-able .entry:nth-child(6) {
+			display: none;
+		}
 	}
 
 	@media (max-width: 1300px) {
-		.list {
-			grid-template-columns: repeat(5, 1fr);
-		}
-
 		section {
 			padding: 0 60px;
 		}
@@ -275,19 +390,31 @@
 			left: 60px;
 			width: calc(100% - 120px);
 		}
+
+		.list {
+			grid-template-columns: repeat(5, 1fr);
+		}
+
+		.filter-able .entry:nth-child(5) {
+			display: none;
+		}
 	}
 
 	@media (max-width: 1000px) {
-		.list {
-			grid-template-columns: repeat(4, 1fr);
-		}
-
 		.hero {
 			height: calc(25vw * 1.5873);
 		}
 
 		.hero-entry {
 			grid-template-columns: 25vw 1fr;
+		}
+
+		.list {
+			grid-template-columns: repeat(4, 1fr);
+		}
+
+		.filter-able .entry:nth-child(4) {
+			display: none;
 		}
 	}
 
@@ -309,10 +436,6 @@
 	}
 
 	@media (max-width: 500px) {
-		.list {
-			grid-template-columns: repeat(3, 1fr);
-		}
-
 		section {
 			padding: 0 20px;
 			margin-bottom: 30px;
@@ -327,6 +450,14 @@
 			left: 20px;
 			width: calc(100% - 40px);
 			grid-template-columns: 30vw 1fr;
+		}
+
+		.list {
+			grid-template-columns: repeat(3, 1fr);
+		}
+
+		.filter-able .entry:nth-child(3) {
+			display: none;
 		}
 	}
 </style>

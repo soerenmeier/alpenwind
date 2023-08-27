@@ -9,9 +9,14 @@
 		placeholder="Sueche"
 		bind:value
 	>
+	<slot />
 </div>
 
 <style>
+	.search {
+		position: relative;
+	}
+
 	input {
 		display: block;
 		width: 350px;
