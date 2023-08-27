@@ -26,8 +26,15 @@ export default class Router {
 		return this.routeChangeListeners.add(fn);
 	}
 
+	/// returns an AttachableRoute or null
 	matchRoute(req) {
-		return this.routes.find(r => r.check(req)) ?? null;
+		for (const route of this.routes) {
+			const attachable = route.check(req);
+			if (attachable)
+				return attachable;
+		}
+
+		return null;
 	}
 
 	currentReq() {
@@ -62,49 +69,72 @@ export default class Router {
 			return;
 
 		this._currentReq = req;
-		window.history.pushState(req.toHistoryState(), '', req.uri);
+		window.history.pushState(
+			req.toHistoryState(),
+			'',
+			req.uri + req.search.toString()
+		);
 		this._changedHistory = true;
 
-		this.routeChangeListeners.trigger(this.matchRoute(req));
+		this.routeChangeListeners.trigger(this.matchRoute(req), req);
 	}
 
 	_listen() {
 		window.addEventListener('click', e => {
-			const link = e.composedPath().find(e => {
-				return e.tagName && e.tagName.toLowerCase() === 'a';
-			});
-
-			if (!link)
+			const link = e.target.closest('a');
+			const openInNewTab = e.metaKey || e.ctrlKey || e.shiftKey;
+			const saveLink = e.altKey;
+			if (!link || !link.href || openInNewTab || saveLink)
 				return;
 
-			const uri = this._convertUrlToUri(link.href);
-			if (uri === null)
+			const target = link?.target ?? '';
+			if (target.toLowerCase() === '_blank')
+				return;
+
+			const req = this._urlToRequest(link.href);
+			if (!req)
 				return;
 
 			e.preventDefault();
 
-			this._openReq(new Request(uri));
+			this._openReq(req);
 		});
 
 		manualListeners.add(({ url, state }) => {
-			let uri = url;
-			if (!url.startsWith('/')) {
-				uri = this._convertUrlToUri(url);
-				if (uri === null)
-					throw new Error('url not parseable: ' + url);
-			}
+			const req = this._urlToRequest(url, state);
+			if (!req)
+				throw new Error('url not parseable: ' + url);
 
-			this._openReq(new Request(uri, state));
+			this._openReq(req);
 		})
 
 		window.addEventListener('popstate', e => {
 			e.preventDefault();
 
-			const req = new Request(e.state.uri, e.state.state ?? {});
+			const req = new Request(
+				e.state.uri,
+				e.state.state ?? {},
+				e.state?.search ?? ''
+			);
 			this._currentReq = req;
 
 			this.routeChangeListeners.trigger(this.matchRoute(req));
 		});
+	}
+
+	/// returns null if the url does not match our host and protocol
+	_urlToRequest(url, state = {}) {
+		const loc = window.location;
+
+		if (url.startsWith('/'))
+			url = loc.protocol + '//' + loc.host + url;
+
+		url = new URL(url);
+		// validate protocol and host
+		if (url.protocol !== loc.protocol || url.host !== loc.host)
+			return null;
+
+		return new Request(url.pathname, state, url.search);
 	}
 
 	/// returns null if the url does not match our host and protocol
@@ -128,40 +158,40 @@ function sanitizeUri(uri) {
 }
 
 export class Request {
-	constructor(uri, state = {}) {
+	constructor(uri, state = {}, search = '') {
 		this.uri = sanitizeUri(uri);
+		this.search = new URLSearchParams(search);
 		this.state = state;
 	}
 
 	static fromCurrent() {
-		const state = window.history.state?.state ?? null;
-		return new Request(window.location.pathname, state);
+		return new Request(
+			window.location.pathname,
+			window.history.state?.state ?? null,
+			window.location.search
+		);
 	}
 
 	toHistoryState() {
 		return {
 			uri: this.uri,
-			state: this.state
+			state: this.state,
+			search: this.search.toString()
 		};
 	}
 }
 
 export class Route {
-	/// returns true if this route matches the request
+	/// returns an AttachableRoute if this route matches the request
+	/// else null
 	check(req) {
-		return false;
-	}
-
-	/// el: a dom element where this routes component should be inserted
-	/// needs to return a function which when called removes the route
-	/// from the dom element
-	attachComponent(el) {
-		throw new Error('not implemented');
+		return null;
 	}
 }
 
 export class StaticRoute extends Route {
 	/// needs to be a ComponentBuilder
+	/// uri can either be a regex or a string
 	constructor(uri, compBuilder) {
 		super();
 
@@ -170,22 +200,49 @@ export class StaticRoute extends Route {
 	}
 
 	check(req) {
-		return req.uri === this.uri;
+		let props = {};
+
+		if (typeof this.uri === 'string') {
+			if (this.uri !== req.uri)
+				return;
+		} else {
+			const match = req.uri.match(this.uri);
+			if (!match || match[0] != req.uri)
+				return false;
+
+			props = match.groups;
+		}
+
+		const searchObj = Object.fromEntries(req.search);
+		props = { ...searchObj, ...props };
+
+		return new AttachableRoute(props, this._comp);
+	}
+}
+
+export class AttachableRoute {
+	constructor(props, compBuilder) {
+		this._props = props;
+		this._comp = compBuilder;
 	}
 
+	/// el: a dom element where this routes component should be inserted
+	/// needs to return a function which when called removes the route
+	/// from the dom element
 	attachComponent(el) {
-		return this._comp.attach(el);
+		return this._comp.attach(el, this._props);
 	}
 }
 
 export class ComponentBuilder {
 	/// returns a function which detaches again
-	attach(el) {
+	attach(el, props = {}) {
 		throw new Error('todo');
 	}
 }
 
 export class SvelteComponent extends ComponentBuilder {
+	/// note these props can be overriden by search queries
 	constructor(comp, props = {}) {
 		super();
 
@@ -193,10 +250,10 @@ export class SvelteComponent extends ComponentBuilder {
 		this._props = props;
 	}
 
-	attach(el) {
+	attach(el, props = {}) {
 		const comp = new this._comp({
 			target: el,
-			props: this._props,
+			props: { ...this._props, ...props },
 			intro: true
 		});
 		return () => comp.$destroy();
