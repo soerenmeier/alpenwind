@@ -13,7 +13,7 @@ tokio = { version = "1.0", features = ["rt-multi-thread", "sync"] }
 bytes = "1.0"
 postgres = { package = "fire-postgres", version = "0.1", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
-crypto = { package = "fire-crypto", version = "0.3", features = ["b64", "serde"] }
+crypto = { package = "fire-crypto", version = "0.4", features = ["b64", "serde"] }
 fire = { package = "fire-http", version = "0.3.2" }
 toml = "0.7"
 hyper = { version = "0.14", features = ["client"] }

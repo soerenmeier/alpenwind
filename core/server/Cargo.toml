@@ -10,7 +10,7 @@ tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "fs"] }
 clap = { version = "4.0", features = ["derive"] }
 postgres = { package = "fire-postgres", version = "0.1", features = ["hash", "json"] }
 serde = { version = "1.0", features = ["derive"] }
-crypto = { package = "fire-crypto", version = "0.3", features = ["b64", "serde"] }
+crypto = { package = "fire-crypto", version = "0.4", features = ["b64", "serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 toml = "0.7"

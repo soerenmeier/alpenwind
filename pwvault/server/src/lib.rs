@@ -6,6 +6,11 @@ mod db;
 mod favicons;
 
 mod assets {
+	#[cfg(debug_assertions)]
+	pub const JS: &str = "main.js";
+	#[cfg(debug_assertions)]
+	pub const CSS: &str = "style.css";
+	
 	include!(concat!(env!("OUT_DIR"), "/assets_routes.rs"));
 }
 
