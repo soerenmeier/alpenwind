@@ -50,6 +50,15 @@ export default class Router {
 		window.history.replaceState(this._currentReq.toHistoryState(), '');
 	}
 
+	replaceReq(req) {
+		this._currentReq = req;
+		window.history.replaceState(
+			req.toHistoryState(),
+			'',
+			req.toUriWithSearch()
+		);
+	}
+
 	// this only works until the page get's reloaded
 	canGoBack() {
 		return this._changedHistory;
@@ -63,16 +72,28 @@ export default class Router {
 		manualListeners.trigger({ url, state });
 	}
 
+	/// This is only intended to be used if you wan't to modify the history state
+	/// without triggering a routeChange Event
+	pushReq(req) {
+		this._currentReq = req;
+		window.history.pushState(
+			req.toHistoryState(),
+			'',
+			req.toUriWithSearch()
+		);
+		this._changedHistory = true;
+	}
+
 	// ignores the request if we already have opened this page
 	_openReq(req) {
-		if (this._currentReq.uri === req.uri)
+		if (this._currentReq.toUriWithSearch() === req.toUriWithSearch())
 			return;
 
 		this._currentReq = req;
 		window.history.pushState(
 			req.toHistoryState(),
 			'',
-			req.uri + req.search.toString()
+			req.toUriWithSearch()
 		);
 		this._changedHistory = true;
 
@@ -172,12 +193,26 @@ export class Request {
 		);
 	}
 
+	toUriWithSearch() {
+		let uri = this.uri;
+		if (this.search.size)
+			uri += '?' + this.search.toString();
+
+		return uri;
+	}
+
 	toHistoryState() {
 		return {
 			uri: this.uri,
 			state: this.state,
 			search: this.search.toString()
 		};
+	}
+
+	/// does only copy the state on level deep
+	clone() {
+		const { uri, state, search } = this.toHistoryState();
+		return new Request(uri, { ...state }, search);
 	}
 }
 
