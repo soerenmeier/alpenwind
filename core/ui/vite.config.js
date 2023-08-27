@@ -4,6 +4,7 @@ import { defineConfig } from 'vite';
 import toml from 'toml';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import replace from '@rollup/plugin-replace';
+import sveltePreprocess from 'svelte-preprocess';
 
 const configStr = readFileSync('./../server/config.toml');
 const config = toml.parse(configStr);
@@ -21,7 +22,9 @@ export default defineConfig(({ mode }) => {
 			}
 		},
 		plugins: [
-			svelte(),
+			svelte({
+				preprocess: sveltePreprocess()
+			}),
 			replace({
 				preventAssignment: true,
 				'import.meta.env.SERVER_ADDR': addr
