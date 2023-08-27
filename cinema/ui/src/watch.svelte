@@ -49,7 +49,8 @@
 	let video = new Video;
 	let progress = 0;
 	let credits = 0;
-	let progressText = '00:00';
+	let watchedTime = '00:00';
+	let remainingTime = '00:00';
 	let progressStream = newProgressStream();
 	let rmPositionUpdate = () => {};
 	async function load() {
@@ -78,9 +79,16 @@
 	}
 
 	function updateProgressText() {
-		const secs = video.remainingTime();
-		let mins = Math.floor(secs / 60);
-		progressText = `-${mins}:${padZero(Math.round(secs - mins * 60))}`;
+		// watchedTime
+		let wSecs = video.position();
+		const wMins = Math.floor(wSecs / 60);
+		wSecs = Math.round(wSecs - wMins * 60);
+		watchedTime = `${wMins}:${padZero(wSecs)}`;
+
+		let rSecs = video.remainingTime();
+		const rMins = Math.floor(rSecs / 60);
+		rSecs = Math.round(rSecs - rMins * 60);
+		remainingTime = `-${rMins}:${padZero(rSecs)}`;
 	}
 
 	let hideMouseTimeout = null;
@@ -343,8 +351,9 @@
 				></span>
 
 				<footer>
+					<span class="text">{watchedTime}</span>
 					<SeekBar {progress} {credits} on:update={onProgressUpdate}/>
-					<span class="text">{progressText}</span>
+					<span class="text">{remainingTime}</span>
 					<span
 						class="fullscreen"
 						on:click={onFullscreenClick}
@@ -429,7 +438,7 @@
 		bottom: 40px;
 		width: 100%;
 		padding: 0 40px;
-		grid-template-columns: 1fr auto auto;
+		grid-template-columns: auto 1fr auto auto;
 		grid-gap: 15px;
 		align-items: center;
 	}

@@ -181,7 +181,7 @@
 								class="viewmore"
 								on:click={e => clickViewMore(e, group)}
 							>
-								<h4>Aui azeige</h4>
+								<h4>Meh</h4>
 							</a>
 						{/if}
 					</div>
