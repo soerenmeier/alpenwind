@@ -2,7 +2,7 @@ use std::{io, fs};
 use std::path::{Path, PathBuf};
 use std::fmt::Write;
 
-pub const CORELIB_JS_PATH: &str = "/assets/core-lib/corelib.js?v=2";
+pub const CORELIB_JS_PATH: &str = "/assets/core-lib/corelib.js?v=3";
 
 #[derive(Debug, Clone)]
 pub struct File {
