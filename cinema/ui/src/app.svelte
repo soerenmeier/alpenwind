@@ -6,6 +6,7 @@
 	import * as core from 'core-lib';
 	const { router } = core.router;
 	const { session } = core.user;
+	const { open: openCtx } = core.contextmenu;
 	import Cover from './ui/cover.svelte';
 	import BackBtn from 'core-lib-ui/back-btn';
 	import Search from 'core-lib-ui/search';
@@ -57,6 +58,29 @@
 		window.scrollTo({
 			top: 0
 		});
+	}
+
+	function ctxMenu(e, entry) {
+		console.log('ctx', entry);
+
+		if (entry.kind !== 'Movie')
+			return;
+
+		e.preventDefault();
+		e.stopPropagation();
+
+		// todo to make this work we need to add a new api
+		// to set progress
+
+		// openCtx(e,
+		// 	[
+		// 		{ id: 'reset', text: 'Nonid gluegt' },
+		// 		{ id: 'setCompleted', text: 'Scho gluegt' }
+		// 	],
+		// 	id => {
+		// 		console.log('id', id);
+		// 	}
+		// );
 	}
 
 	function searchChange(val) {
@@ -142,6 +166,7 @@
 						alt={lastWatched.title()}
 						percent={lastWatched.percent()}
 						on:click={() => router.open(`/cinema/watch/${lastWatched.id()}`)}
+						on:contextmenu={e => ctxMenu(e, lastWatched)}
 					/>
 					<div class="info">
 						<h1>{lastWatched.title()}</h1>
@@ -164,7 +189,7 @@
 
 					<div class="list" class:filter-able={filterAble}>
 						{#each list as entry}
-							<a href="/cinema/watch/{entry.id()}" class="entry">
+							<a href="/cinema/watch/{entry.id()}" class="entry" on:contextmenu={e => ctxMenu(e, entry)}>
 								<Cover
 									src={entry.poster()}
 									alt={entry.title()}

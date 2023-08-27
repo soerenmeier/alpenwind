@@ -4,7 +4,7 @@
 	export let percent = 0;
 </script>
 
-<figure class="cover" style:--percent={percent} on:click>
+<figure class="cover" style:--percent={percent} on:click on:contextmenu>
 	<img {src} {alt}>
 </figure>
 
