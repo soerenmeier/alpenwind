@@ -17,7 +17,7 @@ export default class App {
 		throw new Error('todo name');
 	}
 
-	async prepare() {}
+	async prepare(cl) {}
 
-	init() {}
+	init(cl) {}
 }

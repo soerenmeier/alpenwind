@@ -1,6 +1,17 @@
-import * as router from './router.js';
+import Router, * as router from './router.js';
 import * as user from './user.js';
-import * as api from './api.js';
-import * as contextmenu from './contextmenu.js';
+import ContextMenu from './contextmenu.js';
 
-export { router, user, api, contextmenu };
+export { router, user };
+
+export default class CoreLib {
+	constructor() {
+		this.router = new Router;
+
+		const userState = user.newState();
+		this.session = userState.session;
+		this.user = userState.user;
+
+		this.contextMenu = new ContextMenu;
+	}
+}

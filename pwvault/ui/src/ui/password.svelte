@@ -4,7 +4,7 @@
 
 <article on:click on:contextmenu>
 	<figure>
-		<img src={password.favicon()}>
+		<img src={password.favicon()} alt={password.site}>
 	</figure>
 	<div class="texts">
 		<h3>{password.site}</h3>

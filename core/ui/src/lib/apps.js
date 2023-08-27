@@ -24,7 +24,7 @@ export class DynamicApp extends App {
 		return this.info?.name ?? '';
 	}
 
-	async prepare() {
+	async prepare(cl) {
 		if (import.meta.env.DEV) {
 			this.mod = await importAppDev(this.key);
 		} else {
@@ -37,8 +37,8 @@ export class DynamicApp extends App {
 		}
 	}
 
-	init() {
-		this.info = this.mod.init();
+	init(cl) {
+		this.info = this.mod.init(cl);
 	}
 }
 
@@ -55,10 +55,10 @@ async function importAppDev(key) {
 }
 
 /// only needs to be called once
-export async function loadApps() {
+export async function loadApps(cl) {
 	const list = await appsApi();
 	apps = list.map(a => new DynamicApp(a));
 	apps.push(new Settings);
-	await Promise.all(apps.map(a => a.prepare()));
-	apps.forEach(a => a.init());
+	await Promise.all(apps.map(a => a.prepare(cl)));
+	apps.forEach(a => a.init(cl));
 }

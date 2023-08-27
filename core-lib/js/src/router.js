@@ -15,7 +15,10 @@ export default class Router {
 	}
 
 	init() {
-		this.routeChangeListeners.trigger(this.matchRoute(this._currentReq));
+		this.routeChangeListeners.trigger(
+			this.matchRoute(this._currentReq),
+			this._currentReq
+		);
 	}
 
 	addRoute(route) {
@@ -264,14 +267,14 @@ export class AttachableRoute {
 	/// el: a dom element where this routes component should be inserted
 	/// needs to return a function which when called removes the route
 	/// from the dom element
-	attachComponent(el) {
-		return this._comp.attach(el, this._props);
+	attachComponent(el, context = null) {
+		return this._comp.attach(el, this._props, context);
 	}
 }
 
 export class ComponentBuilder {
 	/// returns a function which detaches again
-	attach(el, props = {}) {
+	attach(el, props = {}, context = null) {
 		throw new Error('todo');
 	}
 }
@@ -285,14 +288,16 @@ export class SvelteComponent extends ComponentBuilder {
 		this._props = props;
 	}
 
-	attach(el, props = {}) {
+	attach(el, props = {}, context = null) {
+		if (!context)
+			context = new Map;
+
 		const comp = new this._comp({
 			target: el,
 			props: { ...this._props, ...props },
+			context,
 			intro: true
 		});
 		return () => comp.$destroy();
 	}
 }
-
-export const router = new Router;

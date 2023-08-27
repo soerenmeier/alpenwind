@@ -19,6 +19,6 @@
 	"dependencies": {
 		"core-lib": "file:../../core-lib/js",
 		"core-lib-ui": "file:../../core-lib/ui",
-		"fire": "npm:fire-lib-js@^0.2.0"
+		"fire": "npm:fire-lib-js@^0.2.9"
 	}
 }

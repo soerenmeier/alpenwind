@@ -7,7 +7,7 @@
 		"svelte": "^3.49.0"
 	},
 	"dependencies": {
-		"fire": "npm:fire-lib-js@^0.2.0",
+		"fire": "npm:fire-lib-js@^0.2.9",
 		"core-lib": "file:../js"
 	},
 	"exports": {

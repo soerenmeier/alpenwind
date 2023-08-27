@@ -1,9 +1,10 @@
 <script>
-	import { onDestroy } from 'svelte';
+	import { onDestroy, getContext } from 'svelte';
 	import DateTime from 'fire/data/datetime.js';
-	import * as core from 'core-lib';
-	const { user } = core.user;
 	import { apps } from './../lib/apps.js';
+
+	const cl = getContext('cl');
+	const { user } = cl;
 
 
 	let dayStr = '';

@@ -1,9 +1,8 @@
 import { match } from 'fire/util.js';
 import Api from 'fire/api/api.js';
 import Data from 'fire/data/data.js';
-import * as core from 'core-lib';
 
-const addr = core.api.serverAddr;
+const addr = window.API_SERVER_ADDR;
 const api = new Api(addr + 'api/pwvault/');
 
 export function assets(url) {

@@ -14,7 +14,7 @@
 		"vite": "^4.3"
 	},
 	"dependencies": {
-		"fire": "npm:fire-lib-js@^0.2.0"
+		"fire": "npm:fire-lib-js@^0.2.9"
 	},
 	"exports": {
 		".": "./src/lib.js"

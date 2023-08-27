@@ -1,13 +1,13 @@
 <script>
-	import { createEventDispatcher } from 'svelte';
+	import { getContext, createEventDispatcher } from 'svelte';
 	import { slide as svelteSlide } from 'svelte/transition';
 	import { cubicInOut } from 'svelte/easing';
-	import * as core from 'core-lib';
-	const { open: openCtx } = core.contextmenu;
 	import CloseBtn from 'core-lib-ui/close-btn';
 
 	/* consts */
 	const dispatch = createEventDispatcher();
+	const cl = getContext('cl');
+	const openCtx = cl.contextMenu.open;
 
 	function backgroundColor(node, params) {
 		return {

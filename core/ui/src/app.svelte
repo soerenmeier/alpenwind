@@ -1,11 +1,16 @@
 <script>
-	import * as core from 'core-lib';
-	const { router, SvelteComponent } = core.router;
-	const { session, user } = core.user;
+	import { getContext, getAllContexts } from 'svelte';
+	import { router } from 'core-lib';
+	const { SvelteComponent } = router;
 	import ContextMenuOverlay from 'core-lib-ui/contextmenu';
 	import { loginByToken } from './api/users.js';
 	import { loadApps } from './lib/apps.js';
 	import Login from './pages/login.svelte';
+
+	const cl = getContext('cl');
+	const { session, user } = cl;
+
+	const allContext = getAllContexts();
 
 	async function loadSession() {
 		const sess = session.get();
@@ -26,13 +31,13 @@
 	let route = null;
 	let loaded = false;
 	async function load() {
-		await Promise.all([loadSession(), loadApps()]);
+		await Promise.all([loadSession(), loadApps(cl)]);
 
-		router.onRouteChange(rout => {
-			console.log('route change', rout);
+		cl.router.onRouteChange((rout, req) => {
+			console.log('route change', req);
 			route = rout;
 		});
-		router.init();
+		cl.router.init();
 
 		loaded = true;
 	}
@@ -48,9 +53,9 @@
 		if (!session) {
 			// show login
 			const login = new SvelteComponent(Login);
-			destroyComp = login.attach(cont);
+			destroyComp = login.attach(cont, {}, allContext);
 		} else if (route) {
-			destroyComp = route.attachComponent(cont);
+			destroyComp = route.attachComponent(cont, allContext);
 		} else {
 			cont.innerText = 'not found';
 		}

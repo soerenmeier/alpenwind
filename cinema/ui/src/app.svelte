@@ -1,12 +1,8 @@
 <script>
-	import { tick } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import { timeout } from 'fire/util.js';
 	import { stream } from './lib/api.js';
 	import { loadEntries } from './lib/data.js';
-	import * as core from 'core-lib';
-	const { router } = core.router;
-	const { session } = core.user;
-	const { open: openCtx } = core.contextmenu;
 	import Cover from './ui/cover.svelte';
 	import BackBtn from 'core-lib-ui/back-btn';
 	import Search from 'core-lib-ui/search';
@@ -14,6 +10,10 @@
 	let searchValue = '';
 	export { searchValue as search };
 	let initialSearchValue = searchValue;
+
+	const cl = getContext('cl');
+	const { router, session } = cl;
+	const openCtx = cl.contextMenu.open;
 
 	let contEl = null;
 

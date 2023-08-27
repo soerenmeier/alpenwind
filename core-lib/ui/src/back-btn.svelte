@@ -1,6 +1,8 @@
 <script>
-	import * as core from 'core-lib';
-	const { router } = core.router;
+	import { getContext } from 'svelte';
+
+	const cl = getContext('cl');
+	const { router } = cl;
 
 	export let href = '';
 	export let onlyHref = false;

@@ -4,12 +4,11 @@ import Stream from 'fire/api/stream.js';
 import Data from 'fire/data/data.js';
 import DateTime from 'fire/data/datetime.js';
 import { Option } from 'fire/data/parsetypes.js';
-import * as core from 'core-lib';
 
 export const MIN_PERCENT = 0.0001;
 export const MAX_PERCENT = 0.9999;
 
-const addr = core.api.serverAddr;
+const addr = window.API_SERVER_ADDR;
 const api = new Api(addr + 'api/cinema/');
 export let stream = new Stream(api, '/stream');
 

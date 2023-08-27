@@ -1,10 +1,12 @@
 <script>
-	import * as core from 'core-lib';
-	const { user, session } = core.user;
+	import { getContext } from 'svelte';
 	import { save as saveUser, logout } from '../api/users.js';
 	import BackBtn from 'core-lib-ui/back-btn';
 	import BlueFormBtn from 'core-lib-ui/blue-form-btn';
 	import FormInput from 'core-lib-ui/form-input';
+
+	const cl = getContext('cl');
+	const { user, session } = cl;
 
 	let suser = null;
 	function updateSuser(user) {

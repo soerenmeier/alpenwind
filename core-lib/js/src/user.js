@@ -85,7 +85,12 @@ class SessionStore {
 	}
 }
 
-// of type api/users/Session
-export const session = new SessionStore;
-// of type api/users/User
-export const user = writable(null);
+// returns { session, user }
+export function newState() {
+	return {
+		// of type api/users/Session
+		session: new SessionStore,
+		// of type api/users/User
+		user: writable(null)
+	}
+}

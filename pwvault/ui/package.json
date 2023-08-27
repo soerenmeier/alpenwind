@@ -10,11 +10,10 @@
 	"devDependencies": {
 		"@sveltejs/vite-plugin-svelte": "^2.4",
 		"svelte": "^4.0.0",
-		"vite": "^4.3",
-		"fire": "npm:fire-lib-js@^0.2.0"
+		"vite": "^4.3"
 	},
 	"dependencies": {
-		"fire": "npm:fire-lib-js@^0.2.0",
+		"fire": "npm:fire-lib-js@^0.2.9",
 		"core-lib": "file:../../core-lib/js",
 		"core-lib-ui": "file:../../core-lib/ui"
 	}

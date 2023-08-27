@@ -1,20 +1,26 @@
 import './app.css';
 
-import * as core from 'core-lib';
-const { router, StaticRoute, SvelteComponent } = core.router;
+import CoreLib, { router } from 'core-lib';
+const { StaticRoute, SvelteComponent } = router;
 import Api from 'fire/api/api.js';
 import Stream from 'fire/api/stream.js';
 import App from './app.svelte';
 import Apps from './pages/apps.svelte';
 
-router.addRoute(new StaticRoute('/', new SvelteComponent(Apps)));
+function main() {
+	const cl = new CoreLib;
 
-// setup core.api
-const serverAddr = import.meta.env.SERVER_ADDR;
-core.api.init(serverAddr);
+	cl.router.addRoute(new StaticRoute('/', new SvelteComponent(Apps)));
 
-const app = new App({
-	target: document.body
-});
+	// setup core.api
+	window.API_SERVER_ADDR = import.meta.env.SERVER_ADDR;
 
-export default app;
+	const context = new Map;
+	context.set('cl', cl);
+
+	const app = new App({
+		target: document.body,
+		context
+	});
+}
+main();

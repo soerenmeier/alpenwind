@@ -1,7 +1,5 @@
 <script>
-	import * as core from 'core-lib';
-	const { session } = core.user;
-	const { open: openContextMenu } = core.contextmenu;
+	import { getContext } from 'svelte';
 	import BackBtn from 'core-lib-ui/back-btn';
 	import AddBtn from 'core-lib-ui/add-btn';
 	import Search from 'core-lib-ui/search';
@@ -12,6 +10,10 @@
 	import Listeners from 'fire/util/listeners.js';
 	import { sortToHigher } from 'fire/util.js';
 	import { encrypt, decrypt } from './lib/crypto.js';
+
+	const cl = getContext('cl');
+	const { session } = cl;
+	const openContextMenu = cl.contextMenu.open;
 
 	window.dbgPwImport = async (p, masterPw) => {
 		p.password = await encrypt(masterPw, p.password);

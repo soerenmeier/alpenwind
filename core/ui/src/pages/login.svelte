@@ -1,7 +1,9 @@
 <script>
+	import { getContext } from 'svelte';
 	import { login } from '../api/users.js';
-	import * as core from 'core-lib';
-	const { session, user } = core.user;
+
+	const cl = getContext('cl');
+	const { session, user } = cl;
 
 	let username = '';
 	let password = '';

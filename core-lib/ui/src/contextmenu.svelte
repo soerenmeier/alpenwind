@@ -1,6 +1,8 @@
 <script>
-	import * as core from 'core-lib';
-	const { currentOpts } = core.contextmenu;
+	import { getContext } from 'svelte';
+
+	const cl = getContext('cl');
+	const currentOpts = cl.contextMenu.currentOpts;
 
 	let ctx = null;
 	let opts = [];

@@ -1,11 +1,8 @@
 <script>
-	import { onDestroy } from 'svelte';
+	import { getContext, onDestroy } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { padZero } from 'fire/util.js';
 
-	import * as core from 'core-lib';
-	const { router } = core.router;
-	const { session } = core.user;
 	import BackBtn from 'core-lib-ui/back-btn';
 	import MenuBtn from 'core-lib-ui/menu-btn';
 
@@ -28,6 +25,9 @@
 	const M_KEY = 77;
 
 	const HIDE_MOUSE_AFTER = 1000;
+
+	const cl = getContext('cl');
+	const { router, session } = cl;
 
 	/* Vars */
 
