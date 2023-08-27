@@ -1,12 +1,14 @@
 use std::{env, fs};
 use std::fmt::Write;
 
-use core_build_lib::read_dir;
+use core_build_lib::{read_dir, CORELIB_JS_PATH};
 
 
 fn main() {
 	println!("cargo:rerun-if-changed=../ui/assets");
 	println!("cargo:rerun-if-changed=../ui/dist");
+
+	let corelib_path = format!("\"{CORELIB_JS_PATH}\"");
 
 	let out_dir = env::var("OUT_DIR").unwrap();
 
@@ -36,10 +38,7 @@ fn main() {
 			let name = format!("ASSET_{i}");
 			if asset.uri.ends_with(".js") {
 				asset.str_transform_to_memory_file(&name, |s| {
-					let ns = s.replace(
-						"\"core-lib\"",
-						"\"/assets/core-lib/corelib.js\""
-					);
+					let ns = s.replace("\"core-lib\"", &corelib_path);
 
 					*s = ns;
 				}, &mut s);
