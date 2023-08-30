@@ -6,8 +6,8 @@
 
 	/* consts */
 	const dispatch = createEventDispatcher();
-	const cl = getContext('cl');
-	const openCtx = cl.contextMenu.open;
+	const { contextMenu } = getContext('cl');
+	// const openCtx = cl.contextMenu.open;
 
 	function backgroundColor(node, params) {
 		return {
@@ -65,7 +65,7 @@
 		e.preventDefault();
 		e.stopPropagation();
 
-		openCtx(e,
+		contextMenu.open(e,
 			[
 				{ id: 'reset', text: 'Nonid gluegt' },
 				{ id: 'setCompleted', text: 'Scho gluegt' }

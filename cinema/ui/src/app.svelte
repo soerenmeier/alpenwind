@@ -12,8 +12,7 @@
 	let initialSearchValue = searchValue;
 
 	const cl = getContext('cl');
-	const { router, session } = cl;
-	const openCtx = cl.contextMenu.open;
+	const { router, session, contextMenu } = cl;
 
 	let contEl = null;
 
