@@ -160,16 +160,6 @@ export default class Router {
 
 		return new Request(url.pathname, state, url.search);
 	}
-
-	/// returns null if the url does not match our host and protocol
-	_convertUrlToUri(url) {
-		const loc = window.location;
-		const protHost = loc.protocol + '//' + loc.host + '/';
-		if (!url.startsWith(protHost))
-			return null;
-
-		return '/' + url.slice(protHost.length);
-	}
 }
 
 function sanitizeUri(uri) {
