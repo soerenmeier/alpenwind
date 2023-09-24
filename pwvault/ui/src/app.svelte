@@ -13,7 +13,6 @@
 
 	const cl = getContext('cl');
 	const { session } = cl;
-	const openContextMenu = cl.contextMenu.open;
 
 	window.dbgPwImport = async (p, masterPw) => {
 		p.password = await encrypt(masterPw, p.password);
@@ -129,7 +128,7 @@
 	async function onContextMenu(e, pw) {
 		e.preventDefault();
 
-		openContextMenu(e,
+		cl.contextMenu.open(e,
 			[
 				{ id: 'edit', text: 'Bearbeite' },
 				{ id: 'delete', text: 'Lösche' }
