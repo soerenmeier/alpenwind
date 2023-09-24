@@ -28,6 +28,14 @@ fn npm_install() {
 	}
 }
 
+fn npm_ci() {
+	for pack in npmPackages {
+		let npm = cmd(["npm", "ci"]);
+		npm.dir("./" + pack);
+		npm.execute();
+	}
+}
+
 fn npm_update() {
 	for pack in npmPackages {
 		let npm = cmd(["npm", "update"]);
@@ -53,6 +61,35 @@ fn cargo_update() {
 }
 
 // how does the build process work
+
+/// config should be
+/// [apps]
+/// dir = "./apps"
+fn build_all() {
+	for app in apps {
+		build(app);
+	}
+
+	fs::delete("./dist");
+	fs::create_dir("./dist");
+
+	fs::copy("./core/server/target/release/core-server", "./dist");
+
+	fs::create_dir("./dist/apps");
+
+	for app in apps {
+		if app == "core" {
+			continue
+		}
+
+		let app_dir = "./dist/apps/" + app;
+		fs::create_dir(app_dir);
+		fs::copy(
+			"./" + app + "/server/target/release/lib" + app + "_server.so",
+			app_dir + "/" + app + ".so"
+		);
+	}
+}
 
 fn build(app) {
 	let npm = cmd(["npm", "run", "build"]);
@@ -93,4 +130,18 @@ fn test_build(app) {
 	let cargo = cmd(["cargo", "build"]);
 	cargo.dir("./" + app + "/server");
 	cargo.execute();
+}
+
+fn build_docker() {
+	fs::create_dir("./images");
+
+	let build = cmd([
+		"docker", "build", "-t", "alpenwind", "."
+	]);
+	build.execute();
+
+	let save = cmd([
+		"docker", "save", "-o", "./images/alpenwind.tar", "alpenwind"
+	]);
+	save.execute();
 }

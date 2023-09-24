@@ -6,8 +6,13 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 import replace from '@rollup/plugin-replace';
 import sveltePreprocess from 'svelte-preprocess';
 
-const configStr = readFileSync('./../server/config.toml');
-const config = toml.parse(configStr);
+let config = {};
+try {
+	const configStr = readFileSync('./../server/config.toml');
+	config = toml.parse(configStr);
+} catch (e) {
+	console.log('could not find config');
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {

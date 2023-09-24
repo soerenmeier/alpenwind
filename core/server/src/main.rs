@@ -27,7 +27,9 @@ struct Args {
 	#[clap(subcommand)]
 	subcmd: Option<SubCommand>,
 	#[clap(long)]
-	enable_cors: bool
+	enable_cors: bool,
+	#[clap(long, default_value = "./config.toml")]
+	config: String
 }
 
 #[derive(Debug, Parser)]
@@ -65,7 +67,7 @@ async fn main() {
 		.with_env_filter("error")
 		.init();
 
-	let cfg_string = fs::read_to_string("./config.toml").await
+	let cfg_string = fs::read_to_string(args.config).await
 		.expect("failed to read config.toml");
 	let cfg: Config = toml::from_str(&cfg_string)
 		.expect("failed to read config.toml");
