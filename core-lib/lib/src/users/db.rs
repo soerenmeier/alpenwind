@@ -1,11 +1,12 @@
-use super::{User, Rights};
+use super::{Rights, User};
 
-use postgres::{Result, Table, Database, UniqueId, TableTempl};
-use postgres::{whr, impl_json_col_type};
-
+use postgres::json::Json;
+use postgres::table::TableOwned;
+use postgres::{filter, FromRow, ToRow};
+use postgres::{Database, Result, TableTempl, UniqueId};
 
 /// should only be used by core itself
-#[derive(Debug, TableTempl)]
+#[derive(Debug, TableTempl, ToRow, FromRow)]
 pub struct UnsafeUser {
 	#[index(primary)]
 	pub id: UniqueId,
@@ -14,32 +15,36 @@ pub struct UnsafeUser {
 	pub name: String,
 	// hashed
 	pub password: String,
-	pub rights: Rights
+	pub rights: Json<Rights>,
 }
-
-impl_json_col_type!(Rights);
 
 impl From<UnsafeUser> for User {
 	fn from(u: UnsafeUser) -> Self {
-		let UnsafeUser { id, username, name, rights, .. } = u;
-		Self { id, username, name, rights }
+		Self {
+			id: u.id,
+			username: u.username,
+			name: u.name,
+			rights: u.rights.0,
+		}
 	}
 }
 
 #[derive(Debug, Clone)]
 pub struct Users {
-	table: Table<UnsafeUser>
+	table: TableOwned<UnsafeUser>,
 }
 
 impl Users {
 	pub async fn new(db: &Database) -> Self {
 		Self {
-			table: db.table("users").create().await
+			table: db.table_owned("users").create().await,
 		}
 	}
 
 	pub async fn by_id(&self, id: &UniqueId) -> Result<Option<User>> {
-		self.table.find_one(whr!(id)).await
+		self.table
+			.find_one(filter!(id))
+			.await
 			.map(|opt| opt.map(Into::into))
 	}
 }

@@ -1,41 +1,48 @@
 //! A progress channel is a channel which waits on progress
 //! the progress here is a usize which is growing
 
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::task::{ready, Context, Poll};
-use std::future::Future;
-use std::pin::Pin;
 
-use tokio::sync::{Notify, futures};
+use tokio::sync::{futures, Notify};
 
 use pin_project_lite::pin_project;
-
 
 pub fn channel(val: usize) -> (Sender, Receiver) {
 	let inner = Arc::new(Inner {
 		notify: Notify::new(),
-		val: AtomicUsize::new(val)
+		val: AtomicUsize::new(val),
 	});
 
-	(Sender { inner: inner.clone() }, Receiver { inner, received: val })
+	(
+		Sender {
+			inner: inner.clone(),
+		},
+		Receiver {
+			inner,
+			received: val,
+		},
+	)
 }
 
 #[derive(Debug)]
 struct Inner {
 	notify: Notify,
-	val: AtomicUsize
+	val: AtomicUsize,
 }
 
 impl Inner {
-	 pub fn val(&self) -> usize {
-	 	self.val.load(Ordering::Relaxed)
-	 }
+	pub fn val(&self) -> usize {
+		self.val.load(Ordering::Relaxed)
+	}
 }
 
 #[derive(Debug, Clone)]
 pub struct Sender {
-	inner: Arc<Inner>
+	inner: Arc<Inner>,
 }
 
 impl Sender {
@@ -49,12 +56,12 @@ impl Sender {
 
 	pub unsafe fn from_raw(ptr: *const u8) -> Self {
 		Self {
-			inner: Arc::from_raw(ptr as *const _)
+			inner: Arc::from_raw(ptr as *const _),
 		}
 	}
 
 	/// sends the value if it is higher than the already stored one
-	/// 
+	///
 	/// Returns true if sent
 	pub fn send(&self, val: usize) -> bool {
 		let prev = self.inner.val.fetch_max(val, Ordering::Relaxed);
@@ -70,7 +77,7 @@ impl Sender {
 #[derive(Debug, Clone)]
 pub struct Receiver {
 	inner: Arc<Inner>,
-	received: usize
+	received: usize,
 }
 
 impl Receiver {
@@ -93,7 +100,7 @@ impl Receiver {
 			notified: self.inner.notify.notified(),
 			inner: &self.inner,
 			was_ready: false,
-			received: &mut self.received
+			received: &mut self.received,
 		}
 	}
 
@@ -124,7 +131,7 @@ impl Future for Changed<'_> {
 			let val = me.inner.val();
 			if val > **me.received {
 				**me.received = val;
-				return Poll::Ready(())
+				return Poll::Ready(());
 			}
 
 			if *me.was_ready {
@@ -138,19 +145,18 @@ impl Future for Changed<'_> {
 	}
 }
 
-
 #[cfg(test)]
 mod tests {
 	use super::*;
 
 	use tokio::time;
 
-
 	#[test]
 	fn progress_channel() {
 		let rt = tokio::runtime::Builder::new_current_thread()
 			.enable_time()
-			.build().unwrap();
+			.build()
+			.unwrap();
 
 		rt.block_on(progress_channel_test());
 	}

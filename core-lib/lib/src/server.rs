@@ -2,10 +2,9 @@ use crate::{ffi, progress_channel as prog};
 
 pub use tokio::runtime;
 
-
 #[derive(Debug, Clone)]
 pub struct OnTerminate {
-	pub(super) rx: prog::Receiver
+	pub(super) rx: prog::Receiver,
 }
 
 impl OnTerminate {
@@ -21,7 +20,7 @@ impl OnTerminate {
 /// the server as a library can now be closed and removed from memory.
 #[doc(hidden)]
 pub struct Terminated {
-	inner: ffi::c_terminated
+	inner: ffi::c_terminated,
 }
 
 impl Terminated {

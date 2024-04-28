@@ -3,45 +3,46 @@
 //!
 //! The names are in the perspective of the Server.
 
-use std::{slice, mem, ptr};
+#![allow(non_camel_case_types)]
+
 use std::mem::ManuallyDrop;
-use std::time::{SystemTime, Duration};
+use std::time::{Duration, SystemTime};
+use std::{mem, ptr, slice};
 
 use crypto::token::Token;
 
 use postgres::time::DateTime;
 use postgres::UniqueId;
 
-
 #[repr(C)]
 pub struct c_str {
 	/// Never allowed to be null
 	pub ptr: *const u8,
-	pub len: usize
+	pub len: usize,
 }
 
 impl c_str {
 	pub unsafe fn to_str(&self) -> &str {
 		unsafe {
-			std::str::from_utf8_unchecked(
-				slice::from_raw_parts(self.ptr, self.len)
-			)
+			std::str::from_utf8_unchecked(slice::from_raw_parts(
+				self.ptr, self.len,
+			))
 		}
 	}
 
 	/// only safe if this was created with from_static_str
 	pub unsafe fn to_static_str(&self) -> &'static str {
 		unsafe {
-			std::str::from_utf8_unchecked(
-				slice::from_raw_parts(self.ptr, self.len)
-			)
+			std::str::from_utf8_unchecked(slice::from_raw_parts(
+				self.ptr, self.len,
+			))
 		}
 	}
 
 	pub fn from_str(s: &str) -> Self {
 		Self {
 			ptr: s.as_bytes().as_ptr(),
-			len: s.as_bytes().len()
+			len: s.as_bytes().len(),
 		}
 	}
 
@@ -51,13 +52,13 @@ impl c_str {
 }
 
 /// You need to call into_string
-/// else you will leak memory 
+/// else you will leak memory
 #[repr(C)]
 pub struct c_string {
 	pub ptr: *mut u8,
 	pub len: usize,
 	pub cap: usize,
-	pub free: extern "C" fn(ptr: *mut u8, len: usize, cap: usize)
+	pub free: extern "C" fn(ptr: *mut u8, len: usize, cap: usize),
 }
 
 impl c_string {
@@ -76,17 +77,18 @@ impl c_string {
 			ptr: s.as_ptr() as *mut _,
 			len: s.len(),
 			cap: s.capacity(),
-			free
+			free,
 		}
 	}
 
 	pub unsafe fn into_string(self) -> String {
 		let s = {
 			unsafe {
-				std::str::from_utf8_unchecked(
-					slice::from_raw_parts(self.ptr, self.len)
-				)
-			}.to_string()
+				std::str::from_utf8_unchecked(slice::from_raw_parts(
+					self.ptr, self.len,
+				))
+			}
+			.to_string()
 		};
 
 		(self.free)(self.ptr, self.len, self.cap);
@@ -102,10 +104,10 @@ impl c_string {
 #[repr(C)]
 pub struct c_slice<T> {
 	/// never allowed to be null
-	/// 
+	///
 	/// Use NonNull::dangling() when using len == 0
 	pub ptr: *const T,
-	pub len: usize
+	pub len: usize,
 }
 
 impl<T> c_slice<T> {
@@ -117,14 +119,14 @@ impl<T> c_slice<T> {
 	pub fn from_slice(s: &[T]) -> Self {
 		Self {
 			ptr: s.as_ptr(),
-			len: s.len()
+			len: s.len(),
 		}
 	}
 
 	pub fn empty() -> Self {
 		Self {
 			ptr: ptr::NonNull::dangling().as_ptr(),
-			len: 0
+			len: 0,
 		}
 	}
 }
@@ -132,14 +134,14 @@ impl<T> c_slice<T> {
 #[repr(C)]
 pub struct c_core_version {
 	pub major: u16,
-	pub minor: u16
+	pub minor: u16,
 }
 
 #[repr(C)]
 pub struct c_terminator {
 	pub ctx: *mut u8,
 	/// get's only called once
-	pub terminate: extern "C" fn(ctx: *mut u8)
+	pub terminate: extern "C" fn(ctx: *mut u8),
 }
 
 impl Default for c_terminator {
@@ -148,7 +150,7 @@ impl Default for c_terminator {
 
 		Self {
 			ctx: ptr::null_mut(),
-			terminate
+			terminate,
 		}
 	}
 }
@@ -157,7 +159,7 @@ impl Default for c_terminator {
 pub struct c_terminated {
 	pub ctx: *mut u8,
 	/// get's only called once
-	pub terminated: extern "C" fn(ctx: *mut u8)
+	pub terminated: extern "C" fn(ctx: *mut u8),
 }
 
 impl c_terminated {
@@ -172,7 +174,7 @@ impl Default for c_terminated {
 
 		Self {
 			ctx: ptr::null_mut(),
-			terminated
+			terminated,
 		}
 	}
 }
@@ -181,14 +183,14 @@ impl Default for c_terminated {
 #[repr(C)]
 pub struct c_error {
 	pub code: u16,
-	pub string: c_string
+	pub string: c_string,
 }
 
 impl c_error {
 	pub fn ok() -> Self {
 		Self {
 			code: C_ERROR_OK,
-			string: c_string::empty()
+			string: c_string::empty(),
 		}
 	}
 
@@ -199,7 +201,7 @@ impl c_error {
 	pub fn new(code: u16, string: String) -> Self {
 		Self {
 			code,
-			string: c_string::from_string(string)
+			string: c_string::from_string(string),
 		}
 	}
 
@@ -220,7 +222,7 @@ pub struct c_writer {
 	pub ctx: *mut u8,
 	/// You get a &mut ctx (so nobody else has access while in the read fn)
 	pub write: extern "C" fn(ctx: *mut u8, bytes: c_slice<u8>) -> c_error,
-	pub free: extern "C" fn(ctx: *mut u8)
+	pub free: extern "C" fn(ctx: *mut u8),
 }
 
 #[repr(C)]
@@ -229,12 +231,12 @@ pub struct c_listener {
 	/// The listener accept fn get's called once a new connection should be
 	/// accepted, the server must set the first writer so that it can be
 	/// called by the client to write to the server.
-	/// 
+	///
 	/// This fn may be called from different threads and at the same time.
-	pub accept: extern "C" fn(ctx: *const u8, *mut c_writer, c_writer)
-		-> c_error,
+	pub accept:
+		extern "C" fn(ctx: *const u8, *mut c_writer, c_writer) -> c_error,
 	/// Get's called by the client once he does not intend to call accept again
-	pub free: extern "C" fn(ctx: *mut u8)
+	pub free: extern "C" fn(ctx: *mut u8),
 }
 
 impl Default for c_listener {
@@ -242,25 +244,30 @@ impl Default for c_listener {
 		extern "C" fn accept(
 			_: *const u8,
 			_: *mut c_writer,
-			_: c_writer
-		) -> c_error { c_error::ok() }
+			_: c_writer,
+		) -> c_error {
+			c_error::ok()
+		}
 		extern "C" fn free(_: *mut u8) {}
 
 		Self {
 			ctx: ptr::null_mut(),
-			accept, free
+			accept,
+			free,
 		}
 	}
 }
 
 #[repr(C)]
 pub struct c_token {
-	pub bytes: [u8; 32]
+	pub bytes: [u8; 32],
 }
 
 impl c_token {
 	pub fn from_token(t: Token<32>) -> Self {
-		Self { bytes: t.to_bytes() }
+		Self {
+			bytes: t.to_bytes(),
+		}
 	}
 
 	pub fn into_token(self) -> Token<32> {
@@ -271,7 +278,7 @@ impl c_token {
 #[repr(C)]
 pub struct c_systemtime {
 	pub secs: u64,
-	pub nanos: u32
+	pub nanos: u32,
 }
 
 impl c_systemtime {
@@ -279,7 +286,7 @@ impl c_systemtime {
 		let dur = time.duration_since(SystemTime::UNIX_EPOCH).unwrap();
 		Self {
 			secs: dur.as_secs(),
-			nanos: dur.subsec_nanos()
+			nanos: dur.subsec_nanos(),
 		}
 	}
 
@@ -291,16 +298,16 @@ impl c_systemtime {
 #[repr(C)]
 pub struct c_datetime {
 	pub secs: i64,
-	pub nanos: u32
+	pub nanos: u32,
 }
 
 impl c_datetime {
 	pub fn from_datetime(datetime: DateTime) -> Self {
-		let naive = datetime.into_raw().naive_utc();
+		let naive = datetime.into_inner();
 
 		Self {
 			secs: naive.timestamp(),
-			nanos: naive.timestamp_subsec_nanos()
+			nanos: naive.timestamp_subsec_nanos(),
 		}
 	}
 
@@ -311,13 +318,13 @@ impl c_datetime {
 
 #[repr(C)]
 pub struct c_uid {
-	bytes: [u8; 10]
+	bytes: [u8; 10],
 }
 
 impl c_uid {
 	pub fn from_uid(uid: UniqueId) -> Self {
 		Self {
-			bytes: uid.into_bytes()
+			bytes: uid.into_bytes(),
 		}
 	}
 
@@ -332,15 +339,16 @@ pub struct c_session {
 	pub data_token: c_token,
 	pub timeout: c_systemtime,
 	pub created_on: c_datetime,
-	pub user_id: c_uid
+	pub user_id: c_uid,
 }
 
 #[repr(C)]
 pub struct c_sessions {
 	pub ctx: *const u8,
 	pub by_token: extern "C" fn(*const u8, c_token, *mut c_session) -> bool,
-	pub by_data_token: extern "C" fn(*const u8, c_token, *mut c_session) -> bool,
-	pub free: extern "C" fn(*const u8)
+	pub by_data_token:
+		extern "C" fn(*const u8, c_token, *mut c_session) -> bool,
+	pub free: extern "C" fn(*const u8),
 }
 
 impl c_sessions {
@@ -354,18 +362,24 @@ impl Default for c_sessions {
 		extern "C" fn by_token(
 			_ctx: *const u8,
 			_token: c_token,
-			_session: *mut c_session
-		) -> bool { false }
+			_session: *mut c_session,
+		) -> bool {
+			false
+		}
 		extern "C" fn by_data_token(
 			_ctx: *const u8,
 			_token: c_token,
-			_session: *mut c_session
-		) -> bool { false }
+			_session: *mut c_session,
+		) -> bool {
+			false
+		}
 		extern "C" fn free(_ctx: *const u8) {}
 
 		Self {
 			ctx: ptr::null(),
-			by_token, by_data_token, free
+			by_token,
+			by_data_token,
+			free,
 		}
 	}
 }
@@ -381,7 +395,7 @@ pub struct c_core {
 	pub sessions: c_sessions,
 	/// Gets provided by the client and should be called when it is safe
 	/// to destroy all references to the server.
-	pub terminated: c_terminated
+	pub terminated: c_terminated,
 }
 
 /// All this properties should be set by the app (the server)
@@ -391,22 +405,22 @@ pub struct c_core {
 #[repr(C)]
 pub struct c_app {
 	/// You need to set the name of the app
-	/// 
+	///
 	/// This needs to be a static str
 	pub name: c_str,
 	/// You need to set the js entry of the app (might be empty)
-	/// 
+	///
 	/// This needs to be a static str
 	pub js_entry: c_str,
 	/// You need to set the css entry of the app (might be empty)
-	/// 
+	///
 	/// This needs to be a static str
 	pub css_entry: c_str,
 	/// The terminator gets called by client once he want's the server to close
 	pub terminator: c_terminator,
 	/// The listener accept fn get's called once a new connection should be
 	/// accepted
-	pub listener: c_listener
+	pub listener: c_listener,
 }
 
 #[allow(non_camel_case_types)]

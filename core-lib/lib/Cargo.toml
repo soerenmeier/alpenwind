@@ -11,13 +11,25 @@ i-am-core = []
 [dependencies]
 tokio = { version = "1.0", features = ["rt-multi-thread", "sync"] }
 bytes = "1.0"
-postgres = { package = "fire-postgres", version = "0.1", features = ["json"] }
+postgres = { package = "fire-postgres", version = "0.3.0-beta.6", features = [
+    "json",
+] }
 serde = { version = "1.0", features = ["derive"] }
-crypto = { package = "fire-crypto", version = "0.4", features = ["b64", "serde"] }
-fire = { package = "fire-http", version = "0.3.2" }
-toml = "0.7"
-hyper = { version = "0.14", features = ["client"] }
+crypto = { package = "fire-crypto", version = "0.4", features = [
+    "b64",
+    "serde",
+] }
+fire = { package = "fire-http", version = "0.5.0-beta.2" }
+toml = "0.8"
+hyper = { version = "1.0", features = ["client"] }
+hyper-util = { version = "0.1", features = ["server"] }
 pin-project-lite = "0.2"
+tracing = "0.1"
 
 [dev-dependencies]
-tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "sync", "io-util"] }
+tokio = { version = "1.0", features = [
+    "rt-multi-thread",
+    "macros",
+    "sync",
+    "io-util",
+] }

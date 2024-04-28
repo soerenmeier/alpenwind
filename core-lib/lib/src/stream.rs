@@ -1,29 +1,21 @@
 use crate::{ffi, util, Error, ErrorKind};
 
-use std::{io, future};
-use std::sync::Arc;
-use std::pin::Pin;
+use std::io;
 use std::mem::MaybeUninit;
-use std::task::{ready, Poll, Context};
-use std::convert::Infallible;
+use std::pin::Pin;
+use std::sync::Arc;
+use std::task::{ready, Context, Poll};
 
-use tokio::sync::{mpsc};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
+use tokio::sync::mpsc;
 
 use bytes::Bytes;
-
-use hyper::server::accept::Accept;
-use hyper::service::Service;
-use hyper::Uri;
-use hyper::client::connect::{Connection, Connected};
-
-use fire::service::{MakeFireService, FireService};
 
 const CONCURRENT_STREAM_REQS: usize = 1024;
 const CONCURRENT_WRITES_PER_STREAM: usize = 1024;
 
 pub struct Listener {
-	rx: mpsc::Receiver<Stream>
+	rx: mpsc::Receiver<Stream>,
 }
 
 impl Listener {
@@ -37,36 +29,9 @@ impl Listener {
 	}
 }
 
-impl Accept for Listener {
-	type Conn = Stream;
-	type Error = Error;
-
-	fn poll_accept(
-		mut self: Pin<&mut Self>,
-		cx: &mut Context
-	) -> Poll<Option<Result<Stream, Error>>> {
-		self.rx.poll_recv(cx)
-			.map(|o| o.map(Ok))
-	}
-}
-
-impl<'a> Service<&'a Stream> for MakeFireService {
-	type Response = FireService;
-	type Error = Infallible;
-	type Future = future::Ready<Result<FireService, Infallible>>;
-
-	fn poll_ready(&mut self, _: &mut Context) -> Poll<Result<(), Infallible>> {
-		Poll::Ready(Ok(()))
-	}
-
-	fn call(&mut self, _stream: &'a Stream) -> Self::Future {
-		future::ready(Ok(self.make(([127, 0, 0, 1], 0).into())))
-	}
-}
-
 /// Used to create a c_listener
 pub struct CListener {
-	tx: mpsc::Sender<Stream>
+	tx: mpsc::Sender<Stream>,
 }
 
 impl CListener {
@@ -76,7 +41,7 @@ impl CListener {
 		extern "C" fn accept(
 			ctx: *const u8,
 			reader: *mut ffi::c_writer,
-			writer: ffi::c_writer
+			writer: ffi::c_writer,
 		) -> ffi::c_error {
 			// we do a manual Arc::clone
 			unsafe { Arc::increment_strong_count(ctx as *const CListener) };
@@ -89,12 +54,12 @@ impl CListener {
 
 			let stream = Stream {
 				reader: n_reader,
-				writer
+				writer,
 			};
 
 			match util::mpsc_send(&ctx.tx, stream) {
 				Ok(_) => ffi::c_error::ok(),
-				Err(e) => e.into_c()
+				Err(e) => e.into_c(),
 			}
 		}
 
@@ -109,7 +74,7 @@ impl CListener {
 
 struct Reader {
 	buf: Option<Bytes>,
-	rx: mpsc::Receiver<Bytes>
+	rx: mpsc::Receiver<Bytes>,
 }
 
 impl Reader {
@@ -126,16 +91,17 @@ impl AsyncRead for Reader {
 	fn poll_read(
 		mut self: Pin<&mut Self>,
 		cx: &mut Context,
-		buf: &mut ReadBuf
+		buf: &mut ReadBuf,
 	) -> Poll<io::Result<()>> {
 		let mut bytes = if let Some(b) = self.buf.take() {
 			b
 		} else {
-			ready!(self.rx.poll_recv(cx))
-				.ok_or_else(|| io::Error::new(
+			ready!(self.rx.poll_recv(cx)).ok_or_else(|| {
+				io::Error::new(
 					io::ErrorKind::BrokenPipe,
-					"mpsc was channel closed"
-				))?
+					"mpsc was channel closed",
+				)
+			})?
 		};
 
 		let len = buf.remaining().min(bytes.len());
@@ -152,7 +118,7 @@ impl AsyncRead for Reader {
 }
 
 struct TxReader {
-	tx: mpsc::Sender<Bytes>
+	tx: mpsc::Sender<Bytes>,
 }
 
 impl TxReader {
@@ -161,7 +127,7 @@ impl TxReader {
 
 		extern "C" fn write(
 			ctx: *mut u8,
-			bytes: ffi::c_slice<u8>
+			bytes: ffi::c_slice<u8>,
 		) -> ffi::c_error {
 			// we have exclusive access
 			let ctx = unsafe { &mut *(ctx as *mut TxReader) };
@@ -170,7 +136,7 @@ impl TxReader {
 
 			match util::mpsc_send(&ctx.tx, bytes) {
 				Ok(_) => ffi::c_error::ok(),
-				Err(e) => e.into_c()
+				Err(e) => e.into_c(),
 			}
 		}
 
@@ -185,14 +151,14 @@ impl TxReader {
 
 struct Writer {
 	is_closed: bool,
-	inner: ffi::c_writer
+	inner: ffi::c_writer,
 }
 
 impl Writer {
 	pub fn new(inner: ffi::c_writer) -> Self {
 		Self {
 			is_closed: false,
-			inner
+			inner,
 		}
 	}
 
@@ -203,10 +169,8 @@ impl Writer {
 			return Err(Error::new(ErrorKind::Closed, ""));
 		}
 
-		let r = (self.inner.write)(
-			self.inner.ctx,
-			ffi::c_slice::from_slice(bytes)
-		);
+		let r =
+			(self.inner.write)(self.inner.ctx, ffi::c_slice::from_slice(bytes));
 
 		if r.is_ok() {
 			Ok(())
@@ -239,9 +203,10 @@ impl AsyncWrite for Writer {
 	fn poll_write(
 		mut self: Pin<&mut Self>,
 		_cx: &mut Context,
-		buf: &[u8]
+		buf: &[u8],
 	) -> Poll<io::Result<usize>> {
-		let r = self.write(buf)
+		let r = self
+			.write(buf)
 			.map(|_| buf.len())
 			.map_err(|e| io::Error::new(e.kind.to_io(), e.msg));
 
@@ -250,14 +215,14 @@ impl AsyncWrite for Writer {
 
 	fn poll_flush(
 		self: Pin<&mut Self>,
-		_cx: &mut Context
+		_cx: &mut Context,
 	) -> Poll<io::Result<()>> {
 		Poll::Ready(Ok(()))
 	}
 
 	fn poll_shutdown(
 		mut self: Pin<&mut Self>,
-		_cx: &mut Context
+		_cx: &mut Context,
 	) -> Poll<io::Result<()>> {
 		self.close();
 
@@ -265,10 +230,9 @@ impl AsyncWrite for Writer {
 	}
 }
 
-
 pub struct Stream {
 	reader: Reader,
-	writer: Writer
+	writer: Writer,
 }
 
 impl Stream {
@@ -283,7 +247,7 @@ impl AsyncRead for Stream {
 	fn poll_read(
 		mut self: Pin<&mut Self>,
 		cx: &mut Context,
-		buf: &mut ReadBuf
+		buf: &mut ReadBuf,
 	) -> Poll<io::Result<()>> {
 		Pin::new(&mut self.reader).poll_read(cx, buf)
 	}
@@ -293,34 +257,28 @@ impl AsyncWrite for Stream {
 	fn poll_write(
 		mut self: Pin<&mut Self>,
 		cx: &mut Context,
-		buf: &[u8]
+		buf: &[u8],
 	) -> Poll<io::Result<usize>> {
 		Pin::new(&mut self.writer).poll_write(cx, buf)
 	}
 
 	fn poll_flush(
 		mut self: Pin<&mut Self>,
-		cx: &mut Context
+		cx: &mut Context,
 	) -> Poll<io::Result<()>> {
 		Pin::new(&mut self.writer).poll_flush(cx)
 	}
 
 	fn poll_shutdown(
 		mut self: Pin<&mut Self>,
-		cx: &mut Context
+		cx: &mut Context,
 	) -> Poll<io::Result<()>> {
 		Pin::new(&mut self.writer).poll_shutdown(cx)
 	}
 }
 
-impl Connection for Stream {
-	fn connected(&self) -> Connected {
-		Connected::new()
-	}
-}
-
 pub struct Connector {
-	inner: ffi::c_listener
+	inner: ffi::c_listener,
 }
 
 impl Connector {
@@ -336,7 +294,7 @@ impl Connector {
 		(self.inner.accept)(
 			self.inner.ctx,
 			&mut writer as *mut _ as *mut _,
-			c_reader.into_c()
+			c_reader.into_c(),
 		);
 
 		let writer = Writer::new(unsafe { writer.assume_init() });
@@ -354,21 +312,6 @@ impl Drop for Connector {
 		(self.inner.free)(self.inner.ctx)
 	}
 }
-
-impl Service<Uri> for &Connector {
-	type Response = Stream;
-	type Error = Infallible;
-	type Future = future::Ready<Result<Stream, Infallible>>;
-
-	fn poll_ready(&mut self, _: &mut Context) -> Poll<Result<(), Infallible>> {
-		Poll::Ready(Ok(()))
-	}
-
-	fn call(&mut self, _: Uri) -> Self::Future {
-		future::ready(Ok(self.connect()))
-	}
-}
-
 
 #[cfg(test)]
 mod tests {
@@ -390,7 +333,7 @@ mod tests {
 
 					let l = stream.read_buf(&mut v).await.unwrap();
 					if l == 0 {
-						break
+						break;
 					}
 
 					stream.write_all(&v).await.unwrap();

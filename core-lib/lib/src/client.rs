@@ -1,11 +1,11 @@
-use crate::{ffi, progress_channel as prog};
 use crate::server::OnTerminate;
+use crate::{ffi, progress_channel as prog};
 
 pub use tokio::runtime;
 
 #[derive(Debug)]
 pub struct Terminator {
-	tx: prog::Sender
+	tx: prog::Sender,
 }
 
 impl Terminator {
