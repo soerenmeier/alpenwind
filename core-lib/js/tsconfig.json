@@ -1,0 +1,8 @@
+{
+	"compilerOptions": {
+		"target": "ES2021",
+		"module": "Preserve",
+		"moduleResolution": "Bundler"
+	},
+	"include": ["src/**/*", "rollup.config.ts"]
+}
