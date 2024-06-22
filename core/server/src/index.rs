@@ -1,8 +1,8 @@
-use fire::{Request, Response, Data, Result, Error};
 use fire::fs::serve_memory_file;
-use fire::header::{RequestHeader, Method};
-use fire::util::PinnedFuture;
+use fire::header::{Method, RequestHeader};
 use fire::routes::Route;
+use fire::util::PinnedFuture;
+use fire::{Data, Error, Request, Response, Result};
 
 const FILE: &[u8] = include_bytes!("../../ui/dist/index.html");
 
@@ -18,7 +18,7 @@ impl Route for Index {
 	fn call<'a>(
 		&'a self,
 		req: &'a mut Request,
-		_data: &'a Data
+		_data: &'a Data,
 	) -> PinnedFuture<'a, Result<Response>> {
 		PinnedFuture::new(async move {
 			serve_memory_file("index.html", FILE, req, None)

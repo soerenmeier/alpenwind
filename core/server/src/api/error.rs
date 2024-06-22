@@ -1,8 +1,8 @@
 use std::fmt;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use fire_api::error::{ApiError, Error as ErrorTrait, StatusCode};
+use fire_api::error::{self, ApiError, StatusCode};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Error {
@@ -12,27 +12,34 @@ pub enum Error {
 	MissingDataToken,
 	InvalidDataToken,
 	Internal(String),
-	Request(String)
+	Request(String),
 }
 
 impl ApiError for Error {
-	fn internal<E: ErrorTrait>(e: E) -> Self {
-		Self::Internal(e.to_string())
-	}
+	fn from_error(e: error::Error) -> Self {
+		use error::Error::*;
 
-	fn request<E: ErrorTrait>(e: E) -> Self {
-		Self::Request(e.to_string())
+		match e {
+			HeadersMissing(_) | Deserialize(_) => Self::Request(e.to_string()),
+			ExtractionError(e) => {
+				// we should check if the type is Error
+				e.downcast()
+					.map(|e| *e)
+					.unwrap_or_else(|e| Self::Internal(e.to_string()))
+			}
+			e => Self::Internal(e.to_string()),
+		}
 	}
 
 	fn status_code(&self) -> StatusCode {
 		match self {
-			Self::LoginIncorrect |
-			Self::MissingAuthToken |
-			Self::InvalidAuthToken |
-			Self::MissingDataToken |
-			Self::InvalidDataToken => StatusCode::FORBIDDEN,
+			Self::LoginIncorrect
+			| Self::MissingAuthToken
+			| Self::InvalidAuthToken
+			| Self::MissingDataToken
+			| Self::InvalidDataToken => StatusCode::FORBIDDEN,
 			Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
-			Self::Request(_) => StatusCode::BAD_REQUEST
+			Self::Request(_) => StatusCode::BAD_REQUEST,
 		}
 	}
 }

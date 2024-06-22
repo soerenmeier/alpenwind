@@ -1,5 +1,5 @@
-use std::{env, fs};
 use std::fmt::Write;
+use std::{env, fs};
 
 use core_build_lib::{read_dir, CORELIB_JS_PATH};
 
@@ -7,7 +7,6 @@ use core_build_lib::{read_dir, CORELIB_JS_PATH};
 const ASSETS_DIR: &str = "../ui/assets";
 #[cfg(not(debug_assertions))]
 const ASSETS_DIR: &str = "../ui/dist/assets";
-
 
 fn main() {
 	println!("cargo:rerun-if-changed=../ui/assets");
@@ -19,10 +18,14 @@ fn main() {
 	let out_dir = env::var("OUT_DIR").unwrap();
 
 	let mut s = String::new();
-	write!(s, "\
+	write!(
+		s,
+		"\
 		use fire::FireBuilder;\n\
 		use fire::fs::MemoryFile;\n\n\
-	").unwrap();
+	"
+	)
+	.unwrap();
 
 	let mut i = 0;
 
@@ -30,11 +33,15 @@ fn main() {
 	for asset in assets {
 		let name = format!("ASSET_{i}");
 		if asset.uri.ends_with(".js") {
-			asset.str_transform_to_memory_file(&name, |s| {
-				let ns = s.replace("\"core-lib\"", &corelib_path);
+			asset.str_transform_to_memory_file(
+				&name,
+				|s| {
+					let ns = s.replace("\"core-lib\"", &corelib_path);
 
-				*s = ns;
-			}, &mut s);
+					*s = ns;
+				},
+				&mut s,
+			);
 		} else {
 			asset.to_memory_file(&name, &mut s);
 		}

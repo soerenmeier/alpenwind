@@ -1,10 +1,10 @@
-mod users;
-mod apps;
 mod api;
+mod apps;
 mod cors;
-mod tempfile;
 #[cfg(not(debug_assertions))]
 mod index;
+mod tempfile;
+mod users;
 
 mod assets {
 	include!(concat!(env!("OUT_DIR"), "/assets_routes.rs"));
@@ -18,8 +18,7 @@ use tokio::fs;
 use core_lib::config::DbConf;
 
 use clap::Parser;
-use serde::{Serialize, Deserialize};
-
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Parser)]
 #[command(version)]
@@ -29,12 +28,12 @@ struct Args {
 	#[clap(long)]
 	enable_cors: bool,
 	#[clap(long, default_value = "./config.toml")]
-	config: String
+	config: String,
 }
 
 #[derive(Debug, Parser)]
 enum SubCommand {
-	CreateUser(CreateUser)
+	CreateUser(CreateUser),
 }
 
 #[derive(Debug, Parser)]
@@ -43,7 +42,7 @@ struct CreateUser {
 	name: String,
 	password: String,
 	#[clap(long)]
-	root: bool
+	root: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,12 +50,10 @@ struct Config {
 	#[serde(rename = "listen-on")]
 	listen_on: String,
 	database: DbConf,
-	apps: apps::AppsConf
+	apps: apps::AppsConf,
 }
 
-
 struct ConfigString(String);
-
 
 #[tokio::main]
 async fn main() {
@@ -64,15 +61,15 @@ async fn main() {
 	unsafe { args.init() };
 
 	tracing_subscriber::fmt()
-		.with_env_filter("error")
+		.with_env_filter("core=info,fire_http=info,error")
 		.init();
 
-	let cfg_string = fs::read_to_string(args.config).await
+	let cfg_string = fs::read_to_string(args.config)
+		.await
 		.expect("failed to read config.toml");
-	let cfg: Config = toml::from_str(&cfg_string)
-		.expect("failed to read config.toml");
+	let cfg: Config =
+		toml::from_str(&cfg_string).expect("failed to read config.toml");
 	let cfg_string = ConfigString(cfg_string);
-
 
 	// open database
 	let db_cfg = &cfg.database;
@@ -80,29 +77,33 @@ async fn main() {
 		&db_cfg.host,
 		&db_cfg.name,
 		&db_cfg.user,
-		&db_cfg.password
-	).await;
+		&db_cfg.password,
+	)
+	.await
+	.expect("failed to connect to database");
 
 	let users = Users::new(&db).await;
 
 	match args.subcmd {
 		Some(SubCommand::CreateUser(create_user)) => {
 			let rights = Rights {
-				root: create_user.root
+				root: create_user.root,
 			};
 
-			let user = users.insert(
-				create_user.username,
-				create_user.name,
-				create_user.password,
-				rights
-			).await.unwrap();
+			let user = users
+				.insert(
+					create_user.username,
+					create_user.name,
+					create_user.password,
+					rights,
+				)
+				.await
+				.unwrap();
 			println!("created user {user:?}");
-			return
-		},
+			return;
+		}
 		None => {}
 	}
-
 
 	let mut server = fire::build(&cfg.listen_on).await.unwrap();
 
@@ -111,7 +112,7 @@ async fn main() {
 	server.add_data(cfg_string);
 	assets::add_routes(&mut server);
 	users::api_routes::add_routes(&mut server);
-	server.add_raw_route(apps::route::AppsRoute::new(server.data().clone()));
+	server.add_raw_route(apps::route::AppsRoute);
 	apps::api_routes::add_routes(&mut server);
 	#[cfg(not(debug_assertions))]
 	server.add_route(index::Index);
@@ -127,9 +128,9 @@ async fn main() {
 		tokio::spawn(async move {
 			server.ignite().await.unwrap();
 		})
-	).unwrap();
+	)
+	.unwrap();
 }
-
 
 static mut ENABLE_CORS: bool = false;
 impl Args {

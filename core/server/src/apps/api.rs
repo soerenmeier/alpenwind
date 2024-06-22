@@ -1,26 +1,25 @@
 use crate::api::Error;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use fire_api::{Request, Method};
-
+use fire_api::{Method, Request};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct App {
 	pub key: String,
 	pub js_entry: Option<String>,
-	pub css_entry: Option<String>
+	pub css_entry: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AppsReq;
+pub struct AppsReq {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Apps {
-	pub apps: Vec<App>
+	pub apps: Vec<App>,
 }
 
 impl Request for AppsReq {

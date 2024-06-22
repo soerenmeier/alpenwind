@@ -4,21 +4,35 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-fire-api = { package = "fire-http-api", version = "0.2.0" }
-fire = { package = "fire-http", version = "0.3.0", features = ["fs"] }
+fire-api = { package = "fire-http-api", version = "0.4.0-alpha.5" }
+fire = { package = "fire-http", version = "0.5.0-beta.3", features = ["fs"] }
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "fs"] }
 clap = { version = "4.0", features = ["derive"] }
-postgres = { package = "fire-postgres", version = "0.1", features = ["hash", "json"] }
+postgres = { package = "fire-postgres", version = "0.3.0-beta.6", features = [
+    "json",
+] }
 serde = { version = "1.0", features = ["derive"] }
-crypto = { package = "fire-crypto", version = "0.4", features = ["b64", "serde"] }
+crypto = { package = "fire-crypto", version = "0.4", features = [
+    "b64",
+    "serde",
+] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-toml = "0.7"
+toml = "0.8"
 libloading = "0.8"
-core-lib = { version = "0.1", path = "../../core-lib/lib", features = ["i-am-core"] }
-hyper = { version = "0.14", features = ["client"] }
-http = "0.2"
+core-lib = { version = "0.1", path = "../../core-lib/lib", features = [
+    "i-am-core",
+] }
+hyper = { version = "1.0", features = ["client"] }
+http = "1.0"
 uuid = { version = "1.2", features = ["v4"] }
+bcrypt = "0.15.1"
+tower-service = "0.3"
+hyper-util = { version = "0.1", features = [
+    "client",
+    "client-legacy",
+    "tokio",
+] }
 
 [build-dependencies]
 core-build-lib = { version = "0.1", path = "../../core-lib/build" }

@@ -1,46 +1,49 @@
-use super::{User, Session, Timeout};
-use super::api::{LoginReq, Login, LoginByTokenReq, RenewReq, LogoutReq, SaveReq};
+use super::api::{
+	Login, LoginByTokenReq, LoginReq, LogoutReq, RenewReq, SaveReq,
+};
 use super::db::Users;
-use crate::api::{Result, Error};
+use super::{Session, Timeout, User};
+use crate::api::{Error, Result};
 
 use std::time::Duration;
 
-use fire::FireBuilder;
 use fire::header::RequestHeader;
+use fire::FireBuilder;
 
 use fire_api::api;
-use fire_api::util::ResponseHeaders;
 
 use core_lib::users::{get_token, get_token_from_cookie};
+use fire_api::response::ResponseSettings;
 
 // 1/2 year
 const TIMEOUT_DURATION: Duration = Duration::from_secs(365 * 24 * 60 * 60 * 60);
 
-
 pub async fn sess_user_from_req(
 	header: &RequestHeader,
-	users: &Users
+	users: &Users,
 ) -> Result<(Session, User)> {
-	let token = get_token(header)
-		.ok_or(Error::MissingAuthToken)?;
+	let token = get_token(header).ok_or(Error::MissingAuthToken)?;
 
-	users.by_sess_token(&token).await?
+	users
+		.by_sess_token(&token)
+		.await?
 		.ok_or(Error::InvalidAuthToken)
 }
 
 #[allow(dead_code)]
 pub async fn sess_user_from_cookie(
 	header: &RequestHeader,
-	users: &Users
+	users: &Users,
 ) -> Result<(Session, User)> {
-	let token = get_token_from_cookie(header)
-		.ok_or(Error::MissingDataToken)?;
+	let token = get_token_from_cookie(header).ok_or(Error::MissingDataToken)?;
 
-	users.by_data_token(&token).await?
+	users
+		.by_data_token(&token)
+		.await?
 		.ok_or(Error::InvalidDataToken)
 }
 
-fn set_cookie(headers: &mut ResponseHeaders, sess: Option<&Session>) {
+fn set_cookie(headers: &mut ResponseSettings, sess: Option<&Session>) {
 	let setts = if crate::Args::enable_cors() {
 		"Path=/; HttpOnly; SameSite=None; Secure"
 	} else {
@@ -48,12 +51,12 @@ fn set_cookie(headers: &mut ResponseHeaders, sess: Option<&Session>) {
 	};
 
 	if let Some(sess) = sess {
-		headers.insert(
+		headers.header(
 			"set-cookie",
-			format!("data-token={}; {setts}", sess.data_token)
+			format!("data-token={}; {setts}", sess.data_token),
 		);
 	} else {
-		headers.insert("set-cookie", format!("data-token=; {setts}"));
+		headers.header("set-cookie", format!("data-token=; {setts}"));
 	}
 }
 
@@ -61,9 +64,11 @@ fn set_cookie(headers: &mut ResponseHeaders, sess: Option<&Session>) {
 async fn login(
 	req: LoginReq,
 	users: &Users,
-	resp_header: &mut ResponseHeaders
+	resp_header: &mut ResponseSettings,
 ) -> Result<Login> {
-	let user = users.login(&req.username, &req.password).await?
+	let user = users
+		.login(&req.username, &req.password)
+		.await?
 		.ok_or(Error::LoginIncorrect)?;
 
 	// create Session
@@ -78,7 +83,7 @@ async fn login(
 async fn login_by_token(
 	header: &RequestHeader,
 	users: &Users,
-	resp_header: &mut ResponseHeaders
+	resp_header: &mut ResponseSettings,
 ) -> Result<Login> {
 	let (session, user) = sess_user_from_req(header, users).await?;
 
@@ -91,7 +96,7 @@ async fn login_by_token(
 async fn renew(
 	header: &RequestHeader,
 	users: &Users,
-	resp_header: &mut ResponseHeaders
+	resp_header: &mut ResponseSettings,
 ) -> Result<Login> {
 	let (session, user) = sess_user_from_req(header, users).await?;
 
@@ -109,7 +114,7 @@ async fn renew(
 async fn logout(
 	header: &RequestHeader,
 	users: &Users,
-	resp_header: &mut ResponseHeaders
+	resp_header: &mut ResponseSettings,
 ) -> Result<()> {
 	let (session, _) = sess_user_from_req(header, users).await?;
 
@@ -125,16 +130,17 @@ async fn logout(
 async fn save(
 	req: SaveReq,
 	header: &RequestHeader,
-	users: &Users
+	users: &Users,
 ) -> Result<User> {
 	let (_, mut user) = sess_user_from_req(header, users).await?;
 
 	user.name = req.name;
-	users.update(&user.id, &user.name, req.password.as_deref()).await?;
+	users
+		.update(&user.id, &user.name, req.password.as_deref())
+		.await?;
 
 	Ok(user)
 }
-
 
 pub fn add_routes(server: &mut FireBuilder) {
 	server.add_route(login);

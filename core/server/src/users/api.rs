@@ -1,9 +1,9 @@
-use super::{User, Session};
+use super::{Session, User};
 use crate::api::Error;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use fire_api::{Request, Method};
+use fire_api::{Method, Request};
 
 // Login
 
@@ -11,14 +11,14 @@ use fire_api::{Request, Method};
 #[serde(rename_all = "camelCase")]
 pub struct LoginReq {
 	pub username: String,
-	pub password: String
+	pub password: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Login {
 	pub user: User,
-	pub session: Session
+	pub session: Session,
 }
 
 impl Request for LoginReq {
@@ -80,7 +80,7 @@ impl Request for LogoutReq {
 #[serde(rename_all = "camelCase")]
 pub struct SaveReq {
 	pub name: String,
-	pub password: Option<String>
+	pub password: Option<String>,
 }
 
 impl Request for SaveReq {

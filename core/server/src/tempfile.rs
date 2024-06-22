@@ -1,15 +1,14 @@
-use std::{env, fs, io, ops};
 use std::path::{Path, PathBuf};
+use std::{env, fs, io, ops};
 
 #[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;
 
 use uuid::Uuid;
 
-
 #[derive(Debug)]
 pub struct TempFile {
-	path: PathBuf
+	path: PathBuf,
 }
 
 impl TempFile {

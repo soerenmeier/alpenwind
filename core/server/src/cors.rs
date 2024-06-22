@@ -1,13 +1,13 @@
-use fire::{FireBuilder, Request, Response, Data};
-use fire::routes::Catcher;
-use fire::header::{StatusCode, RequestHeader, ResponseHeader};
-use fire::util::PinnedFuture;
 use fire::header::{
-	Method, ACCESS_CONTROL_ALLOW_METHODS, ACCESS_CONTROL_ALLOW_ORIGIN,
-	ACCESS_CONTROL_ALLOW_HEADERS, X_XSS_PROTECTION,
-	ACCESS_CONTROL_ALLOW_CREDENTIALS
+	Method, ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS,
+	ACCESS_CONTROL_ALLOW_METHODS, ACCESS_CONTROL_ALLOW_ORIGIN,
+	X_XSS_PROTECTION,
 };
-
+use fire::header::{RequestHeader, ResponseHeader, StatusCode};
+use fire::resources::Resources;
+use fire::routes::Catcher;
+use fire::util::PinnedFuture;
+use fire::{FireBuilder, Request, Response};
 
 struct CorsHeaders;
 
@@ -20,7 +20,7 @@ impl Catcher for CorsHeaders {
 		&'a self,
 		req: &'a mut Request,
 		res: &'a mut Response,
-		_data: &'a Data
+		_data: &'a Resources,
 	) -> PinnedFuture<'a, fire::Result<()>> {
 		let values = &mut res.header.values;
 
@@ -37,7 +37,7 @@ impl Catcher for CorsHeaders {
 		values.insert(ACCESS_CONTROL_ALLOW_ORIGIN, host);
 		values.insert(
 			ACCESS_CONTROL_ALLOW_HEADERS,
-			"content-type, auth-token, cookie, credentials"
+			"content-type, auth-token, cookie, credentials",
 		);
 		values.insert(X_XSS_PROTECTION, "0");
 

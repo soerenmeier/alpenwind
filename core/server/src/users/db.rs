@@ -1,26 +1,29 @@
-use super::{User, Token, Session, Rights, Timeout};
+use super::{Rights, Session, Timeout, Token, User};
 
-use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 
+use bcrypt::{hash, verify};
 use core_lib::ffi;
 use core_lib::users::db::UnsafeUser;
 
-use postgres::{Result, Table, Database, UniqueId};
-use postgres::{whr, updt, try2};
-use postgres::hash::{verify, hash};
+use fire::Resource;
+use postgres::json::Json;
+use postgres::table::TableOwned;
+use postgres::{filter, row, try2, whr, Error};
+use postgres::{Database, Result, UniqueId};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Resource)]
 pub struct Users {
-	table: Table<UnsafeUser>,
-	sessions: Sessions
+	table: TableOwned<UnsafeUser>,
+	sessions: Sessions,
 }
 
 impl Users {
 	pub async fn new(db: &Database) -> Self {
 		Self {
-			table: db.table("users").create().await,
-			sessions: Sessions::new()
+			table: db.table_owned("users").create().await,
+			sessions: Sessions::new(),
 		}
 	}
 
@@ -32,20 +35,21 @@ impl Users {
 	}
 
 	pub async fn by_id(&self, id: &UniqueId) -> Result<Option<User>> {
-		self.table.find_one(whr!(id)).await
+		self.table
+			.find_one(filter!(id))
+			.await
 			.map(|opt| opt.map(Into::into))
 	}
 
 	pub async fn login(
 		&self,
 		username: &str,
-		password: &str
+		password: &str,
 	) -> Result<Option<User>> {
 		let username = &username;
-		let user = try2!(self.table.find_one(whr!(username)).await?);
+		let user = try2!(self.table.find_one(filter!(username)).await?);
 
-		let passwd_corr = verify(password, &user.password)
-			.unwrap_or(false);
+		let passwd_corr = verify(password, &user.password).unwrap_or(false);
 
 		Ok(passwd_corr.then(|| user.into()))
 	}
@@ -55,12 +59,15 @@ impl Users {
 		username: String,
 		name: String,
 		password: String,
-		rights: Rights
+		rights: Rights,
 	) -> Result<User> {
 		let user = UnsafeUser {
 			id: UniqueId::new(),
-			password: hash(&password)?,
-			username, name, rights
+			password: hash(&password, 12)
+				.map_err(|e| Error::Unknown(e.into()))?,
+			username,
+			name,
+			rights: Json(rights),
 		};
 
 		self.table.insert_one(&user).await?;
@@ -73,13 +80,14 @@ impl Users {
 		&self,
 		id: &UniqueId,
 		name: &str,
-		password: Option<&str>
+		password: Option<&str>,
 	) -> Result<()> {
 		if let Some(password) = password {
-			let password = hash(password)?;
-			self.table.update(whr!(id), updt!(&name, &password)).await
+			let password =
+				hash(password, 12).map_err(|e| Error::Unknown(e.into()))?;
+			self.table.update(row! { &name, &password }, whr!(id)).await
 		} else {
-			self.table.update(whr!(id), updt!(&name)).await
+			self.table.update(row! { &name }, whr!(id)).await
 		}
 	}
 
@@ -89,7 +97,7 @@ impl Users {
 
 	pub async fn by_sess_token(
 		&self,
-		token: &Token
+		token: &Token,
 	) -> Result<Option<(Session, User)>> {
 		let sess = try2!(self.session_by_token(token));
 		let user = try2!(self.by_id(&sess.user_id).await?);
@@ -103,7 +111,7 @@ impl Users {
 
 	pub async fn by_data_token(
 		&self,
-		token: &Token
+		token: &Token,
 	) -> Result<Option<(Session, User)>> {
 		let sess = try2!(self.session_by_data_token(token));
 		let user = try2!(self.by_id(&sess.user_id).await?);
@@ -118,7 +126,7 @@ impl Users {
 	pub fn session_insert(
 		&self,
 		user_id: UniqueId,
-		timeout: Timeout
+		timeout: Timeout,
 	) -> Session {
 		self.sessions.insert(user_id, timeout)
 	}
@@ -132,16 +140,15 @@ impl Users {
 	}
 }
 
-
 #[derive(Debug, Clone)]
 struct Sessions {
-	inner: Arc<RwLock<Inner>>
+	inner: Arc<RwLock<Inner>>,
 }
 
 impl Sessions {
 	pub fn new() -> Self {
 		Self {
-			inner: Arc::new(RwLock::new(Inner::new()))
+			inner: Arc::new(RwLock::new(Inner::new())),
 		}
 	}
 
@@ -155,11 +162,7 @@ impl Sessions {
 		reader.get_by_data(token).map(Clone::clone)
 	}
 
-	pub fn insert(
-		&self,
-		user_id: UniqueId,
-		timeout: Timeout
-	) -> Session {
+	pub fn insert(&self, user_id: UniqueId, timeout: Timeout) -> Session {
 		let mut writer = self.inner.write().unwrap();
 
 		let sess = Session::new(timeout, user_id);
@@ -189,7 +192,7 @@ impl Sessions {
 
 	unsafe fn from_ptr(ptr: *const u8) -> Self {
 		Self {
-			inner: Arc::from_raw(ptr as *const _)
+			inner: Arc::from_raw(ptr as *const _),
 		}
 	}
 
@@ -199,7 +202,7 @@ impl Sessions {
 		extern "C" fn by_token(
 			ctx: *const u8,
 			token: ffi::c_token,
-			session:  *mut ffi::c_session
+			session: *mut ffi::c_session,
 		) -> bool {
 			let sessions = unsafe { Sessions::clone_from_ptr(ctx) };
 
@@ -207,15 +210,15 @@ impl Sessions {
 				Some(sess) => {
 					unsafe { session.write(sess.into_c()) };
 					true
-				},
-				None => false
+				}
+				None => false,
 			}
 		}
 
 		extern "C" fn by_data_token(
 			ctx: *const u8,
 			token: ffi::c_token,
-			session:  *mut ffi::c_session
+			session: *mut ffi::c_session,
 		) -> bool {
 			let sessions = unsafe { Sessions::clone_from_ptr(ctx) };
 
@@ -223,8 +226,8 @@ impl Sessions {
 				Some(sess) => {
 					unsafe { session.write(sess.into_c()) };
 					true
-				},
-				None => false
+				}
+				None => false,
 			}
 		}
 
@@ -234,7 +237,9 @@ impl Sessions {
 
 		ffi::c_sessions {
 			ctx: me.into_ptr(),
-			by_token, by_data_token, free
+			by_token,
+			by_data_token,
+			free,
 		}
 	}
 }
@@ -242,24 +247,24 @@ impl Sessions {
 #[derive(Debug)]
 struct Inner {
 	inner: HashMap<Token, Session>,
-	data: HashMap<Token, Token>
+	data: HashMap<Token, Token>,
 }
 
 impl Inner {
 	fn new() -> Self {
 		Self {
 			inner: HashMap::new(),
-			data: HashMap::new()
+			data: HashMap::new(),
 		}
 	}
 
 	fn get(&self, token: &Token) -> Option<&Session> {
-		self.inner.get(token)
-			.filter(|s| !s.did_timeout())
+		self.inner.get(token).filter(|s| !s.did_timeout())
 	}
 
 	fn get_by_data(&self, token: &Token) -> Option<&Session> {
-		self.data.get(token)
+		self.data
+			.get(token)
 			.and_then(|t| self.inner.get(t))
 			.filter(|s| !s.did_timeout())
 	}

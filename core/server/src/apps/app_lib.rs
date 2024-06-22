@@ -1,24 +1,21 @@
 use super::{prog, MODULE_EXTENSION};
-use crate::Users;
 use crate::tempfile::TempFile;
+use crate::Users;
 
-use std::sync::Arc;
 use std::mem::MaybeUninit;
+use std::sync::Arc;
 
-use tokio::time::{self, Duration};
 use tokio::runtime::Handle;
+use tokio::time::{self, Duration};
 
 use core_lib::ffi;
 use core_lib::stream::Connector;
 
 use libloading::Library;
 
-
 pub const RUNNNIG: usize = 0;
 pub const TERMINATING: usize = 1;
 pub const TERMINATED: usize = 2;
-
-
 
 pub struct AppLib {
 	pub connector: Connector,
@@ -26,14 +23,14 @@ pub struct AppLib {
 	pub js_entry: &'static str,
 	pub css_entry: &'static str,
 	pub terminated: prog::Receiver,
-	pub terminator: Terminator
+	pub terminator: Terminator,
 }
 
 struct Lib {
 	lib: Library,
 	// used to cleanup the tmp file
 	#[allow(dead_code)]
-	file: TempFile
+	file: TempFile,
 }
 
 impl AppLib {
@@ -43,20 +40,18 @@ impl AppLib {
 
 		let lib = Arc::new(Lib {
 			lib: unsafe { Library::new(file.as_path()).unwrap() },
-			file
+			file,
 		});
 		let (term_tx, term_rx) = prog::channel(RUNNNIG);
 
 		let terminated_ctx = Box::new(TerminatedCtx {
 			lib: lib.clone(),
 			notify: term_tx.clone(),
-			handle: Handle::current()
+			handle: Handle::current(),
 		});
 
-		let c_init = unsafe {
-			lib.lib.get::<ffi::c_init_fn>(b"c_init")
-				.unwrap()
-		};
+		let c_init =
+			unsafe { lib.lib.get::<ffi::c_init_fn>(b"c_init").unwrap() };
 
 		// setup terminated
 		extern "C" fn terminated_fn(ctx: *mut u8) {
@@ -75,17 +70,14 @@ impl AppLib {
 		}
 		let c_terminated = ffi::c_terminated {
 			ctx: Box::into_raw(terminated_ctx) as *mut u8,
-			terminated: terminated_fn
+			terminated: terminated_fn,
 		};
 
 		let mut core = ffi::c_core {
 			config: ffi::c_str::from_str(cfg),
-			version: ffi::c_core_version {
-				major: 0,
-				minor: 1
-			},
+			version: ffi::c_core_version { major: 0, minor: 1 },
 			sessions: users.to_sessions_c(),
-			terminated: c_terminated
+			terminated: c_terminated,
 		};
 
 		let mut app = MaybeUninit::uninit();
@@ -102,8 +94,8 @@ impl AppLib {
 			terminated: term_rx,
 			terminator: Terminator {
 				inner: app.terminator,
-				notify: term_tx
-			}
+				notify: term_tx,
+			},
 		}
 	}
 }
@@ -111,12 +103,12 @@ impl AppLib {
 struct TerminatedCtx {
 	lib: Arc<Lib>,
 	notify: prog::Sender,
-	handle: Handle
+	handle: Handle,
 }
 
 pub struct Terminator {
 	inner: ffi::c_terminator,
-	notify: prog::Sender
+	notify: prog::Sender,
 }
 
 impl Terminator {

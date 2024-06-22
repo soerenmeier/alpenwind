@@ -1,17 +1,14 @@
-pub mod db;
 pub mod api;
 pub mod api_routes;
-pub use api_routes::sess_user_from_req;
+pub mod db;
 
-pub use core_lib::users::{User, Rights, Token, Session, Timeout};
+pub use core_lib::users::{Rights, Session, Timeout, Token, User};
 
-use tokio::time::{self, Duration};
+use fire::resources::Resources;
 use tokio::task::JoinHandle;
+use tokio::time::{self, Duration};
 
-use fire::Data;
-
-
-pub(crate) fn bg_task(data: Data) -> JoinHandle<()> {
+pub(crate) fn bg_task(data: Resources) -> JoinHandle<()> {
 	tokio::spawn(async move {
 		let mut intv = time::interval(Duration::from_secs(2 * 60));
 		let users = data.get::<db::Users>().unwrap();
