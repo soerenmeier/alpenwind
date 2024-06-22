@@ -1,33 +1,46 @@
 <script>
-	import { getContext } from 'svelte';
-	import { save as saveUser, logout } from '../api/users.js';
-	import BackBtn from 'core-lib-ui/back-btn';
-	import BlueFormBtn from 'core-lib-ui/blue-form-btn';
-	import FormInput from 'core-lib-ui/form-input';
+	import { save as saveUser, logout } from '../api/users';
+	import BackBtn from 'core-lib-ui/BackBtn';
+	import FormBtn from 'core-lib-ui/FormBtn';
+	import FormInput from 'core-lib-ui/FormInput';
+	import { getCore } from 'core-lib';
 
-	const cl = getContext('cl');
+	const cl = getCore();
 	const { user, session } = cl;
 
 	let suser = null;
+	let passwordRepeat = '';
 	function updateSuser(user) {
 		suser = user;
 		suser.password = '';
+		passwordRepeat = '';
 	}
 	$: updateSuser($user);
 
+	let loading = false;
+	let error = '';
 	async function onSaveUser(e) {
 		e.preventDefault();
 
+		if (suser.password !== passwordRepeat) {
+			error = 'Passwörter stimme ned überi';
+			return;
+		}
+
+		error = '';
+		loading = true;
 		try {
 			$user = await saveUser(
 				suser.name,
 				suser.password,
-				session.getValid().token
+				session.getValid().token,
 			);
 		} catch (e) {
 			console.log('save error', e);
-			alert('Benutzer het ned chöne gspichered werde');
+			error = 'Benutzer het ned chöne gspichered werde';
 		}
+
+		loading = false;
 	}
 
 	async function onLogout(e) {
@@ -61,21 +74,32 @@
 					required
 				/>
 				<FormInput
+					type="password"
 					name="password"
 					label="Passwort"
 					placeholder="Passwort igäh"
 					bind:value={suser.password}
 				/>
+				<FormInput
+					type="password"
+					name="password-repeat"
+					label="Passwort Wiederhole"
+					placeholder="Passwort igäh"
+					bind:value={passwordRepeat}
+				/>
+
+				{#if error}
+					<p class="error">{error}</p>
+				{/if}
 
 				<div class="btns">
-					<BlueFormBtn text="Spichere" />
+					<FormBtn text="Spichere" {loading} />
 					<button class="logout" on:click={onLogout}>Abmelde</button>
 				</div>
 			</form>
 		</section>
 	</main>
 </div>
-
 
 <style>
 	header {
@@ -114,11 +138,15 @@
 		background-color: transparent;
 		border: none;
 		color: #707070;
-		transition: color .2s ease;
+		transition: color 0.2s ease;
 		cursor: pointer;
 	}
 
 	.logout:hover {
 		color: #808080;
+	}
+
+	.error {
+		margin-bottom: 15px;
 	}
 </style>

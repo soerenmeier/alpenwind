@@ -1,17 +1,17 @@
-<script>
+<script lang="ts">
 	import { onDestroy, getContext } from 'svelte';
-	import DateTime from 'fire/data/datetime.js';
-	import { apps } from './../lib/apps.js';
+	import DateTime from 'fire/time/DateTime';
+	import { apps } from '../lib/apps';
+	import { getCore } from 'core-lib';
 
-	const cl = getContext('cl');
+	const cl = getCore();
 	const { user } = cl;
-
 
 	let dayStr = '';
 	let dateStr = '';
 	let timeStr = '';
 	function updateTimeStr() {
-		const now = new DateTime;
+		const now = new DateTime();
 		dayStr = now.toStrDay();
 		dateStr = `${now.date}. ${now.toStrMonth()} ${now.year}`;
 		timeStr = now.toStrShortTime();
@@ -37,13 +37,10 @@
 
 	<div class="apps">
 		{#each apps as app}
-		<a href={app.uri()} class="app">
-			<span
-				class="icon"
-				style="--icon: url('{app.icon()}')"
-			></span>
-			<h4>{app.name()}</h4>
-		</a>
+			<a href={app.uri()} class="app">
+				<span class="icon" style="--icon: url('{app.icon()}')"></span>
+				<h4>{app.name()}</h4>
+			</a>
 		{/each}
 	</div>
 </div>
@@ -74,8 +71,9 @@
 		color: rgba(255, 255, 255, 0.69);
 	}
 
-	.day::after, .date::after {
-		content: ",";
+	.day::after,
+	.date::after {
+		content: ',';
 	}
 
 	.apps {

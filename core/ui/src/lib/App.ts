@@ -1,15 +1,20 @@
+import { Core } from 'core-lib';
+
+// @ts-ignore
 const addr = import.meta.env.SERVER_ADDR;
 
 export default class App {
-	constructor(key) {
+	key: string;
+
+	constructor(key: string) {
 		this.key = key;
 	}
 
-	uri() {
+	uri(): string {
 		return '/' + this.key;
 	}
 
-	icon() {
+	icon(): string {
 		return `${addr}assets/${this.key}/icon.png`;
 	}
 
@@ -17,7 +22,7 @@ export default class App {
 		throw new Error('todo name');
 	}
 
-	async prepare(cl) {}
+	async prepare(cl: Core) {}
 
-	init(cl) {}
+	init(cl: Core) {}
 }

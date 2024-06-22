@@ -1,18 +1,27 @@
-import { apps as appsApi } from './../api/apps.js';
-import Settings from './../settings/app.js';
-import App from './app.js';
+import { Core } from 'core-lib';
+import { apps as appsApi } from '../api/apps.js';
+import Settings from '../settings/app.js';
+import App from './App.js';
 
-export let apps = [];
+export let apps: App[] = [];
 
+// @ts-ignore
 const addr = import.meta.env.SERVER_ADDR;
 
 export class DynamicApp extends App {
+	jsEntry: string;
+	cssEntry: string;
+
+	mod: any;
+	info: { name: string } | null;
+
 	constructor(a) {
 		super(a.key);
 		this.jsEntry = a.jsEntry;
 		this.cssEntry = a.cssEntry;
 
 		this.mod = null;
+		this.info = null;
 	}
 
 	entry() {
@@ -24,7 +33,8 @@ export class DynamicApp extends App {
 		return this.info?.name ?? '';
 	}
 
-	async prepare(cl) {
+	async prepare(cl: Core) {
+		// @ts-ignore
 		if (import.meta.env.DEV) {
 			this.mod = await importAppDev(this.key);
 		} else {
@@ -37,13 +47,13 @@ export class DynamicApp extends App {
 		}
 	}
 
-	init(cl) {
+	init(cl: Core) {
 		this.info = this.mod.init(cl);
 	}
 }
 
 /// we need to do this so vite can transform the files
-async function importAppDev(key) {
+async function importAppDev(key: string) {
 	switch (key) {
 		case 'cinema':
 			return await import('../../../../cinema/ui/src/main.js');
@@ -55,10 +65,10 @@ async function importAppDev(key) {
 }
 
 /// only needs to be called once
-export async function loadApps(cl) {
+export async function loadApps(cl: Core) {
 	const list = await appsApi();
 	apps = list.map(a => new DynamicApp(a));
-	apps.push(new Settings);
+	apps.push(new Settings());
 	await Promise.all(apps.map(a => a.prepare(cl)));
 	apps.forEach(a => a.init(cl));
 }

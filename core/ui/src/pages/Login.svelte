@@ -1,37 +1,43 @@
 <script>
 	import { getContext } from 'svelte';
-	import { login } from '../api/users.js';
+	import { login } from '../api/users';
+	import { getCore } from 'core-lib';
+	import FormBtn from 'core-lib-ui/FormBtn';
 
-	const cl = getContext('cl');
+	const cl = getCore();
 	const { session, user } = cl;
 
 	let username = '';
 	let password = '';
 	let error = '';
+	let loading = false;
 
 	async function submitLogin() {
 		error = '';
+		loading = true;
 		try {
 			const loginRes = await login(username, password);
 			$session = loginRes.session;
 			$user = loginRes.user;
 			console.log('logged in');
+			cl.router.reload();
 		} catch (e) {
 			console.log('login error', e);
 
 			const kind = e.kind ?? e.message;
-			if (kind === 'LoginIncorrect')
+			if (kind === 'LoginIncorrect') {
 				error = 'Email or passwort fausch';
-			else
+			} else {
 				error = 'Login informationen hei ned chöne verschickt werde';
+			}
 
 			password = '';
+			loading = false;
 		}
 	}
 </script>
 
 <div id="login" class="abs-full bg-image">
-
 	<div class="box">
 		<div class="inner-box">
 			<h1>Dihei</h1>
@@ -43,22 +49,22 @@
 					required
 					bind:value={username}
 					placeholder="Benutzername"
-				>
+				/>
 				<input
 					type="password"
 					name="password"
 					required
 					bind:value={password}
 					placeholder="Passwort"
-				>
+				/>
 				{#if error}
 					<div class="error-box">{error}</div>
 				{/if}
-				<button class="action-btn">Amelde</button>
+
+				<FormBtn color="red" text="Amelde" {loading} />
 			</form>
 		</div>
 	</div>
-
 </div>
 
 <style>
@@ -86,7 +92,7 @@
 		margin-bottom: 20px;
 		padding: 9px 15px;
 		background-color: transparent;
-		border: 1px solid rgba(255, 255, 255, .2);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 8px;
 	}
 
