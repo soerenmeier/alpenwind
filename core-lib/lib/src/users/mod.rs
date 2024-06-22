@@ -13,7 +13,7 @@ use crate::ffi;
 use std::fmt;
 use std::mem::MaybeUninit;
 
-use fire::header::RequestHeader;
+use fire::{header::RequestHeader, Resource};
 
 use postgres::Database;
 
@@ -54,6 +54,7 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
+#[derive(Resource)]
 pub struct Users {
 	db: db::Users,
 	sessions: Sessions,

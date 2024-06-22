@@ -6,6 +6,9 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{ready, Context, Poll};
 
+use hyper::rt::ReadBufCursor;
+use hyper_util::client::legacy::connect::{Connected, Connection};
+use hyper_util::rt::TokioIo;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::sync::mpsc;
 
@@ -274,6 +277,70 @@ impl AsyncWrite for Stream {
 		cx: &mut Context,
 	) -> Poll<io::Result<()>> {
 		Pin::new(&mut self.writer).poll_shutdown(cx)
+	}
+}
+
+impl hyper::rt::Read for Stream {
+	fn poll_read(
+		self: Pin<&mut Self>,
+		cx: &mut Context,
+		buf: ReadBufCursor,
+	) -> Poll<Result<(), io::Error>> {
+		let io = TokioIo::new(self);
+		tokio::pin!(io);
+
+		hyper::rt::Read::poll_read(io, cx, buf)
+	}
+}
+
+impl hyper::rt::Write for Stream {
+	fn poll_write(
+		self: Pin<&mut Self>,
+		cx: &mut Context<'_>,
+		buf: &[u8],
+	) -> Poll<Result<usize, io::Error>> {
+		let io = TokioIo::new(self);
+		tokio::pin!(io);
+
+		hyper::rt::Write::poll_write(io, cx, buf)
+	}
+
+	fn poll_flush(
+		self: Pin<&mut Self>,
+		cx: &mut Context<'_>,
+	) -> Poll<Result<(), io::Error>> {
+		let io = TokioIo::new(self);
+		tokio::pin!(io);
+
+		hyper::rt::Write::poll_flush(io, cx)
+	}
+
+	fn poll_shutdown(
+		self: Pin<&mut Self>,
+		cx: &mut Context<'_>,
+	) -> Poll<Result<(), io::Error>> {
+		let io = TokioIo::new(self);
+		tokio::pin!(io);
+
+		hyper::rt::Write::poll_shutdown(io, cx)
+	}
+
+	fn poll_write_vectored(
+		self: Pin<&mut Self>,
+		cx: &mut Context<'_>,
+		bufs: &[std::io::IoSlice<'_>],
+	) -> Poll<Result<usize, std::io::Error>> {
+		let io = TokioIo::new(self);
+		tokio::pin!(io);
+
+		hyper::rt::Write::poll_write_vectored(io, cx, bufs)
+	}
+}
+
+impl Connection for Stream {
+	fn connected(&self) -> Connected {
+		// todo should this return something else?
+		Connected::new()
 	}
 }
 
