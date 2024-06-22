@@ -3,21 +3,59 @@
 	"private": true,
 	"version": "0.0.0",
 	"type": "module",
+	"scripts": {
+		"build": "svelte-package -i ./src",
+		"watch": "svelte-package -i ./src -w"
+	},
 	"devDependencies": {
-		"svelte": "^3.49.0"
+		"svelte": "^4.0.0",
+		"@sveltejs/package": "^2.3.1",
+		"@tsconfig/svelte": "^5.0.2",
+		"eslint": "^8.45.0",
+		"prettier": "^3.2.5",
+		"prettier-plugin-svelte": "^3.1.2",
+		"tslib": "^2.6.2",
+		"typescript": "^5.2.2",
+		"vitest": "^1.1.1",
+		"@sveltejs/vite-plugin-svelte": "^3.0.0"
+
 	},
 	"dependencies": {
-		"fire": "npm:fire-lib-js@^0.2.9",
+		"fire": "npm:fire-lib-js@^0.3",
 		"core-lib": "file:../js"
 	},
 	"exports": {
-		"./add-btn": "./src/add-btn.svelte",
-		"./back-btn": "./src/back-btn.svelte",
-		"./blue-form-btn": "./src/blue-form-btn.svelte",
-		"./close-btn": "./src/close-btn.svelte",
-		"./contextmenu": "./src/contextmenu.svelte",
-		"./form-input": "./src/form-input.svelte",
-		"./menu-btn": "./src/menu-btn.svelte",
-		"./search": "./src/search.svelte"
+		"./AddBtn": {
+			"import": "./dist/AddBtn.svelte",
+			"types": "./dist/AddBtn.svelte.d.ts"
+		},
+		"./BackBtn": {
+			"import": "./dist/BackBtn.svelte",
+			"types": "./dist/BackBtn.svelte.d.ts"
+		},
+		"./BlueFormBtn": {
+			"import": "./dist/BlueFormBtn.svelte",
+			"types": "./dist/BlueFormBtn.svelte.d.ts"
+		},
+		"./CloseBtn": {
+			"import": "./dist/CloseBtn.svelte",
+			"types": "./dist/CloseBtn.svelte.d.ts"
+		},
+		"./ContextMenu": {
+			"import": "./dist/ContextMenu.svelte",
+			"types": "./dist/ContextMenu.svelte.d.ts"
+		},
+		"./FormInput": {
+			"import": "./dist/FormInput.svelte",
+			"types": "./dist/FormInput.svelte.d.ts"
+		},
+		"./MenuBtn": {
+			"import": "./dist/MenuBtn.svelte",
+			"types": "./dist/MenuBtn.svelte.d.ts"
+		},
+		"./Search": {
+			"import": "./dist/Search.svelte",
+			"types": "./dist/Search.svelte.d.ts"
+		}
 	}
 }

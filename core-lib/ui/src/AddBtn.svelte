@@ -1,10 +1,9 @@
-
-<span class="back-btn" on:click>
+<span class="add-btn" on:click>
 	<span class="plus"></span>
 </span>
 
 <style>
-	.back-btn {
+	.add-btn {
 		position: relative;
 		display: block;
 		width: 40px;
@@ -16,7 +15,7 @@
 		cursor: pointer;
 	}
 
-	.back-btn:hover {
+	.add-btn:hover {
 		background-color: var(--light-gray);
 	}
 
@@ -28,7 +27,8 @@
 		width: 16px;
 	}
 
-	.plus::before, .plus::after {
+	.plus::before,
+	.plus::after {
 		position: absolute;
 		content: '';
 		background-color: #fff;

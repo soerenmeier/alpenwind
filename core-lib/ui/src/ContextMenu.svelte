@@ -1,7 +1,7 @@
 <script>
-	import { getContext } from 'svelte';
+	import { getCore } from 'core-lib';
 
-	const cl = getContext('cl');
+	const cl = getCore();
 	const currentOpts = cl.contextMenu.currentOpts;
 
 	let ctx = null;
@@ -27,8 +27,7 @@
 	}
 
 	function onClick(e) {
-		if (e.target !== overlayEl)
-			return;
+		if (e.target !== overlayEl) return;
 
 		close();
 	}
@@ -53,7 +52,7 @@
 <style>
 	.overlay {
 		position: fixed;
-		background-color: rgba(0, 0, 0, .4);
+		background-color: rgba(0, 0, 0, 0.4);
 		z-index: 90;
 	}
 
