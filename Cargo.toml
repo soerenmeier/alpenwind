@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "core-lib/build",
+    "core-lib/lib",
+    "core/server",
+    "cinema/server",
+    "pwvault/server",
+]
+resolver = "2"
