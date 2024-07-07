@@ -4,14 +4,15 @@
 	import { stream } from './lib/api.js';
 	import { loadEntries } from './lib/data.js';
 	import Cover from './ui/cover.svelte';
-	import BackBtn from 'core-lib-ui/back-btn';
-	import Search from 'core-lib-ui/search';
+	import { getCore } from 'core-lib';
+	import BackBtn from 'core-lib-ui/BackBtn';
+	import Search from 'core-lib-ui/Search';
 
 	let searchValue = '';
 	export { searchValue as search };
 	let initialSearchValue = searchValue;
 
-	const cl = getContext('cl');
+	const cl = getCore();
 	const { router, session, contextMenu } = cl;
 
 	let contEl = null;
@@ -22,7 +23,7 @@
 		['watchLater', false, 'Später aluege'],
 		['newest', true, 'Neu hinzuegfüegt'],
 		['series', true, 'Serien'],
-		['movies', true, 'Filme']
+		['movies', true, 'Filme'],
 	];
 
 	async function load() {
@@ -55,15 +56,14 @@
 		await tick();
 
 		window.scrollTo({
-			top: 0
+			top: 0,
 		});
 	}
 
 	function ctxMenu(e, entry) {
 		console.log('ctx', entry);
 
-		if (entry.kind !== 'Movie')
-			return;
+		if (entry.kind !== 'Movie') return;
 
 		e.preventDefault();
 		e.stopPropagation();
@@ -83,10 +83,9 @@
 	}
 
 	function searchChange(val) {
-		if (!entries)
-			return;
+		if (!entries) return;
 
-		const nReq = router.currentReq().clone();
+		const nReq = router.currentRequest.get().clone();
 		nReq.search.set('search', val);
 
 		// if there we didn't do any searching already
@@ -106,7 +105,6 @@
 		}
 	}
 	$: searchChange(searchValue);
-	
 </script>
 
 <div id="cinema" bind:this={contEl}>
@@ -118,15 +116,33 @@
 				<button class="tooltip" on:click={onTooltipClick}>i</button>
 				<div class="tooltip-box" class:open={tooltipOpen}>
 					<p>
-						<strong>Filter nach typ:</strong><br>
-						Nach film: <i>kind:movie</i> oder <i>k:m</i><br>
-						Nach Serie: <i>kind:series</i> oder <i>k:s</i>
+						<strong>Filter nach typ:</strong>
+						<br />
+						Nach film:
+						<i>kind:movie</i>
+						oder
+						<i>k:m</i>
+						<br />
+						Nach Serie:
+						<i>kind:series</i>
+						oder
+						<i>k:s</i>
 					</p>
 					<p>
-						<strong>Sortieren:</strong><br>
-						Nach Jahr: <i>order:year</i> oder <i>o:y</i><br>
-						Nach hochladedatum: <i>order:update</i> oder <i>o:u</i><br>
-						Richtung ändern: <i>order:year:asc</i>
+						<strong>Sortieren:</strong>
+						<br />
+						Nach Jahr:
+						<i>order:year</i>
+						oder
+						<i>o:y</i>
+						<br />
+						Nach hochladedatum:
+						<i>order:update</i>
+						oder
+						<i>o:u</i>
+						<br />
+						Richtung ändern:
+						<i>order:year:asc</i>
 					</p>
 				</div>
 			</Search>
@@ -164,13 +180,17 @@
 						src={lastWatched.fullPoster()}
 						alt={lastWatched.title()}
 						percent={lastWatched.percent()}
-						on:click={() => router.open(`/cinema/watch/${lastWatched.id()}`)}
+						on:click={() =>
+							router.open(`/cinema/watch/${lastWatched.id()}`)}
 						on:contextmenu={e => ctxMenu(e, lastWatched)}
 					/>
 					<div class="info">
 						<h1>{lastWatched.title()}</h1>
 						<!-- <p>{lastWatched.percent() * 100}% gluegt</p> -->
-						<a href="/cinema/watch/{lastWatched.id()}" class="action-btn">
+						<a
+							href="/cinema/watch/{lastWatched.id()}"
+							class="action-btn"
+						>
 							Abspile
 						</a>
 					</div>
@@ -181,14 +201,20 @@
 		{/if}
 
 		{#each groups as [group, filterAble, groupTitle]}
-			{@const list = filterAble ? entries[group].slice(0, 6) : entries[group]}
+			{@const list = filterAble
+				? entries[group].slice(0, 6)
+				: entries[group]}
 			{#if list.length > 0}
 				<section>
 					<h2>{groupTitle}</h2>
 
 					<div class="list" class:filter-able={filterAble}>
 						{#each list as entry}
-							<a href="/cinema/watch/{entry.id()}" class="entry" on:contextmenu={e => ctxMenu(e, entry)}>
+							<a
+								href="/cinema/watch/{entry.id()}"
+								class="entry"
+								on:contextmenu={e => ctxMenu(e, entry)}
+							>
 								<Cover
 									src={entry.poster()}
 									alt={entry.title()}
@@ -272,7 +298,8 @@
 			color: #a3a3a3;
 		}
 
-		i, strong {
+		i,
+		strong {
 			color: white;
 			font-style: normal;
 		}
@@ -353,11 +380,11 @@
 		padding: 10px;
 		align-items: center;
 		justify-content: center;
-		background-color: rgba(0, 0, 0, .7);
+		background-color: rgba(0, 0, 0, 0.7);
 		text-align: center;
 		opacity: 0;
 
-		transition: opacity ease .2s;
+		transition: opacity ease 0.2s;
 	}
 
 	.entry:hover .over {
@@ -374,7 +401,7 @@
 		text-decoration: none;
 		text-align: center;
 
-		transition: background-color ease .2s;
+		transition: background-color ease 0.2s;
 
 		&:hover {
 			background-color: var(--red);
@@ -385,7 +412,6 @@
 		font-size: 20px;
 		font-weight: 600;
 	}
-
 
 	@media (max-width: 1500px) {
 		section {

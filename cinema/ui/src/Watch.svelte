@@ -3,14 +3,15 @@
 	import { fade } from 'svelte/transition';
 	import { padZero } from 'fire/util.js';
 
-	import BackBtn from 'core-lib-ui/back-btn';
-	import MenuBtn from 'core-lib-ui/menu-btn';
+	import BackBtn from 'core-lib-ui/BackBtn';
+	import MenuBtn from 'core-lib-ui/MenuBtn';
 
 	import { newProgressStream, bgImg } from './lib/api.js';
 	import { loadEntry } from './lib/data.js';
 	import SeekBar from './ui/seekbar.svelte';
 	import Video from './ui/video.js';
 	import SelectOverlay from './ui/selectoverlay.svelte';
+	import { getCore } from 'core-lib';
 
 	/* Consts */
 	const ESC = 27;
@@ -26,7 +27,7 @@
 
 	const HIDE_MOUSE_AFTER = 1000;
 
-	const cl = getContext('cl');
+	const cl = getCore();
 	const { router, session } = cl;
 
 	/* Vars */
@@ -46,7 +47,7 @@
 
 	/// entry: WatchEntry
 	let entry = null;
-	let video = new Video;
+	let video = new Video();
 	let progress = 0;
 	let credits = 0;
 	let watchedTime = '00:00';
@@ -93,16 +94,14 @@
 
 	let hideMouseTimeout = null;
 	function waitThenHideMouse() {
-		if (hideMouseTimeout)
-			clearTimeout(hideMouseTimeout);
+		if (hideMouseTimeout) clearTimeout(hideMouseTimeout);
 		hideMouseTimeout = setTimeout(() => {
 			hideMouse = true;
 		}, HIDE_MOUSE_AFTER);
 	}
 
 	function cancelHideMouse() {
-		if (!hideMouseTimeout)
-			return;
+		if (!hideMouseTimeout) return;
 
 		clearInterval(hideMouseTimeout);
 		hideMouseTimeout = null;
@@ -124,10 +123,10 @@
 	function showSendError(e) {
 		console.log('sendError', e);
 		if (!sendErrorShowed) {
-				pause();
-				alert('position update het ned chöne gschickt werde');
-			}
-			sendErrorShowed = true;
+			pause();
+			alert('position update het ned chöne gschickt werde');
+		}
+		sendErrorShowed = true;
 	}
 
 	/* events */
@@ -156,15 +155,13 @@
 		const inCreditsSkipZone = creditsTime < pos && pos < creditsTime + 1;
 		const atTheEnd = video.len() - 1 < pos;
 
-		if (!inCreditsSkipZone && !atTheEnd)
-			return;
+		if (!inCreditsSkipZone && !atTheEnd) return;
 
 		skippedCredits = true;
 
 		// let's try to skip
 		const next = entry.data.nextEpisode();
-		if (!next)
-			return;
+		if (!next) return;
 
 		entry.data.setEpisode(next[0], next[1]);
 		entry = entry;
@@ -189,8 +186,7 @@
 
 	let ovCont, ovPlayBtn;
 	function onOverlayClick(e) {
-		if (e.target !== ovCont && e.target !== ovPlayBtn)
-			return;
+		if (e.target !== ovCont && e.target !== ovPlayBtn) return;
 
 		play();
 	}
@@ -206,8 +202,7 @@
 	}
 
 	function onFullscreenClick(e) {
-		if (inFullscreen)
-			document.exitFullscreen();
+		if (inFullscreen) document.exitFullscreen();
 		else {
 			if (typeof document.body.requestFullscreen === 'function')
 				document.body.requestFullscreen({ navigationUI: 'hide' });
@@ -230,10 +225,8 @@
 
 		switch (e.keyCode) {
 			case ESC:
-				if (showOverlay)
-					router.open('/cinema');
-				else
-					pause();
+				if (showOverlay) router.open('/cinema');
+				else pause();
 				break;
 			case LEFT:
 				video.reverse(10);
@@ -242,10 +235,8 @@
 				video.forward(10);
 				break;
 			case SPACE:
-				if (showOverlay)
-					play();
-				else
-					pause();
+				if (showOverlay) play();
+				else pause();
 				break;
 			case F_KEY:
 				onFullscreenClick(e);
@@ -257,8 +248,7 @@
 	}
 
 	function onMouseMove(e) {
-		if (showOverlay)
-			return;
+		if (showOverlay) return;
 
 		cancelHideMouse();
 		waitThenHideMouse();
@@ -286,7 +276,7 @@
 
 		try {
 			episodes.forEach(ep => {
-				// position: 
+				// position:
 				series.setProgress(season, ep, percent, position);
 				series.sendProgress(progressStream, season, ep);
 			});
@@ -311,18 +301,9 @@
 	on:fullscreenchange={onFullScreenChange}
 />
 
-<div
-	id="watch"
-	class="abs-full"
-	class:hide-mouse={hideMouse}
-	transition:fade
->
+<div id="watch" class="abs-full" class:hide-mouse={hideMouse} transition:fade>
 	{#if entry}
-		<div
-			class="video abs-full"
-			use:bindVideo
-			on:click={onVideoClick}
-		></div>
+		<div class="video abs-full" use:bindVideo on:click={onVideoClick}></div>
 
 		{#if showOverlay}
 			<div
@@ -335,7 +316,9 @@
 					<BackBtn href="/cinema" />
 
 					<h1>
-						<span class="short-title">{entry.currentShortTitle()}</span>
+						<span class="short-title">
+							{entry.currentShortTitle()}
+						</span>
 						<span class="title">{entry.currentTitle()}</span>
 					</h1>
 
@@ -352,7 +335,11 @@
 
 				<footer>
 					<span class="text">{watchedTime}</span>
-					<SeekBar {progress} {credits} on:update={onProgressUpdate}/>
+					<SeekBar
+						{progress}
+						{credits}
+						on:update={onProgressUpdate}
+					/>
 					<span class="text">{remainingTime}</span>
 					<span
 						class="fullscreen"
@@ -366,7 +353,7 @@
 		{#if showSelectOverlay && entry.kind === 'Series'}
 			<SelectOverlay
 				{entry}
-				on:close={() => showSelectOverlay = false}
+				on:close={() => (showSelectOverlay = false)}
 				on:selectEpisode={onSelectEpisode}
 				on:setCompleted={onSetCompleted}
 			/>

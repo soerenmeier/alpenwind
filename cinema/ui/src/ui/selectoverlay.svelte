@@ -2,11 +2,12 @@
 	import { getContext, createEventDispatcher } from 'svelte';
 	import { slide as svelteSlide } from 'svelte/transition';
 	import { cubicInOut } from 'svelte/easing';
-	import CloseBtn from 'core-lib-ui/close-btn';
+	import CloseBtn from 'core-lib-ui/CloseBtn';
+	import { getCore } from 'core-lib';
 
 	/* consts */
 	const dispatch = createEventDispatcher();
-	const { contextMenu } = getContext('cl');
+	const { contextMenu } = getCore();
 	// const openCtx = cl.contextMenu.open;
 
 	function backgroundColor(node, params) {
@@ -14,7 +15,7 @@
 			delay: params.delay ?? 0,
 			duration: params.duration ?? 400,
 			easing: params.easing ?? cubicInOut,
-			css: (t, u) => `background-color: rgba(0,0,0,${t * 0.4})`
+			css: (t, u) => `background-color: rgba(0,0,0,${t * 0.4})`,
 		};
 	}
 
@@ -23,7 +24,7 @@
 			delay: params.delay ?? 0,
 			duration: params.duration ?? 400,
 			easing: params.easing ?? cubicInOut,
-			css: (t, u) => `transform: translateX(${(1 - t) * 100}%)`
+			css: (t, u) => `transform: translateX(${(1 - t) * 100}%)`,
 		};
 	}
 
@@ -36,8 +37,7 @@
 	/// Event handlers
 	let sovCont;
 	function onSelectOverlayClick(e) {
-		if (e.target !== sovCont)
-			return;
+		if (e.target !== sovCont) return;
 
 		dispatch('close');
 	}
@@ -55,7 +55,7 @@
 		dispatch('setCompleted', {
 			season: seasonIdx,
 			episode: episodeIdx,
-			completed
+			completed,
 		});
 		entry = entry;
 	}
@@ -65,18 +65,18 @@
 		e.preventDefault();
 		e.stopPropagation();
 
-		contextMenu.open(e,
+		contextMenu.open(
+			e,
 			[
 				{ id: 'reset', text: 'Nonid gluegt' },
-				{ id: 'setCompleted', text: 'Scho gluegt' }
+				{ id: 'setCompleted', text: 'Scho gluegt' },
 			],
 			id => {
-				if (id === 'reset')
-					setCompleted(seasonIdx, episodeIdx, false);
+				if (id === 'reset') setCompleted(seasonIdx, episodeIdx, false);
 				else if (id === 'setCompleted')
 					setCompleted(seasonIdx, episodeIdx, true);
 				// else if (id === '')
-			}
+			},
 		);
 	}
 </script>
@@ -91,7 +91,6 @@
 		<CloseBtn on:click={onCloseClick} />
 
 		<div class="scroller">
-
 			<h2>Episode uswähle</h2>
 
 			<div class="list">
@@ -111,14 +110,17 @@
 						{#if openSeason === idx}
 							<div
 								class="season-list"
-								transition:svelteSlide={{duration: 200}}
+								transition:svelteSlide={{ duration: 200 }}
 							>
 								{#each season.episodes as episode, eId}
 									<span
 										class="entry"
-										style="--progress: {episode.percent() * 100}%"
-										on:click={() => onSelectEpisode(idx, eId)}
-										on:contextmenu={e => ctxMenu(e, idx, eId)}
+										style="--progress: {episode.percent() *
+											100}%"
+										on:click={() =>
+											onSelectEpisode(idx, eId)}
+										on:contextmenu={e =>
+											ctxMenu(e, idx, eId)}
 									>
 										<span>{episode.title(eId)}</span>
 									</span>
@@ -134,7 +136,7 @@
 
 <style>
 	.select-overlay {
-		background-color: rgba(0, 0, 0, .4);
+		background-color: rgba(0, 0, 0, 0.4);
 		z-index: 30;
 	}
 
@@ -176,7 +178,7 @@
 	}
 
 	.entry::before {
-		content: "";
+		content: '';
 		position: absolute;
 		top: 0;
 		left: 0;
