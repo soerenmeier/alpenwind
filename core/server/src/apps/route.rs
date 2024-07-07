@@ -20,7 +20,7 @@ impl RawRoute for AppsRoute {
 	fn path(&self) -> RoutePath {
 		RoutePath {
 			method: None,
-			path: "/*".into(),
+			path: "/{*p}".into(),
 		}
 	}
 
@@ -34,7 +34,7 @@ impl RawRoute for AppsRoute {
 		let path = req.uri().path();
 
 		// make sure we wan't to redirect the request
-		if PREFIXES.iter().any(|prefix| path.starts_with(prefix)) {
+		if !PREFIXES.iter().any(|prefix| path.starts_with(prefix)) {
 			return PinnedFuture::new(async { None });
 		}
 
@@ -54,10 +54,7 @@ impl RawRoute for AppsRoute {
 			.version(req.version())
 			.body(req.body_mut().take())
 			.unwrap();
-		*new_req.uri_mut() = req.uri().clone();
-		*new_req.method_mut() = req.method().clone();
 		*new_req.headers_mut() = req.headers().clone();
-		mem::swap(new_req.body_mut(), req.body_mut());
 
 		PinnedFuture::new(async move {
 			let fut = async move {
