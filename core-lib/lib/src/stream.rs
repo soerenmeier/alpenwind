@@ -1,5 +1,6 @@
 use crate::{ffi, util, Error, ErrorKind};
 
+use std::future::{self, ready, Future};
 use std::io;
 use std::mem::MaybeUninit;
 use std::pin::Pin;
@@ -7,12 +8,14 @@ use std::sync::Arc;
 use std::task::{ready, Context, Poll};
 
 use hyper::rt::ReadBufCursor;
+use hyper::Uri;
 use hyper_util::client::legacy::connect::{Connected, Connection};
 use hyper_util::rt::TokioIo;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::sync::mpsc;
 
 use bytes::Bytes;
+use tracing::{debug, error, warn};
 
 const CONCURRENT_STREAM_REQS: usize = 1024;
 const CONCURRENT_WRITES_PER_STREAM: usize = 1024;
@@ -46,6 +49,8 @@ impl CListener {
 			reader: *mut ffi::c_writer,
 			writer: ffi::c_writer,
 		) -> ffi::c_error {
+			debug!("c_listener accept called");
+
 			// we do a manual Arc::clone
 			unsafe { Arc::increment_strong_count(ctx as *const CListener) };
 			let ctx = unsafe { Arc::from_raw(ctx as *const CListener) };
@@ -99,7 +104,13 @@ impl AsyncRead for Reader {
 		let mut bytes = if let Some(b) = self.buf.take() {
 			b
 		} else {
-			ready!(self.rx.poll_recv(cx)).ok_or_else(|| {
+			let recv = self.rx.poll_recv(cx);
+			if recv.is_pending() {
+				debug!("poll_read pending");
+			}
+
+			ready!(recv).ok_or_else(|| {
+				error!("mpsc was channel closed");
 				io::Error::new(
 					io::ErrorKind::BrokenPipe,
 					"mpsc was channel closed",
@@ -108,6 +119,7 @@ impl AsyncRead for Reader {
 		};
 
 		let len = buf.remaining().min(bytes.len());
+		debug!("poll_read bytes: {} filling buffer {}", bytes.len(), len);
 
 		let to_send = bytes.split_to(len);
 		buf.put_slice(&to_send);
@@ -168,7 +180,10 @@ impl Writer {
 	pub fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
 		assert!(!bytes.is_empty());
 
+		debug!("write {} bytes", bytes.len());
+
 		if self.is_closed {
+			warn!("write on closed writer");
 			return Err(Error::new(ErrorKind::Closed, ""));
 		}
 
@@ -353,6 +368,10 @@ impl Connector {
 		Self { inner }
 	}
 
+	pub fn into_shared(self) -> SharedConnector {
+		SharedConnector(Arc::new(self))
+	}
+
 	pub fn connect(&self) -> Stream {
 		let (reader, c_reader) = Reader::new();
 
@@ -380,6 +399,26 @@ impl Drop for Connector {
 	}
 }
 
+#[derive(Clone)]
+pub struct SharedConnector(pub Arc<Connector>);
+
+impl tower_service::Service<Uri> for SharedConnector {
+	type Response = Stream;
+	type Error = io::Error;
+	type Future = future::Ready<Result<Self::Response, Self::Error>>;
+
+	fn poll_ready(
+		&mut self,
+		_cx: &mut Context,
+	) -> Poll<Result<(), Self::Error>> {
+		Poll::Ready(Ok(()))
+	}
+
+	fn call(&mut self, _req: Uri) -> Self::Future {
+		ready(Ok(self.0.connect()))
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -387,6 +426,7 @@ mod tests {
 	use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 	#[tokio::test]
+	#[tracing_test::traced_test]
 	async fn simple_read_write() {
 		let (mut listener, c_listener) = Listener::new();
 		let connector = Connector::new(c_listener.into_c());
@@ -411,10 +451,14 @@ mod tests {
 
 		let mut stream = connector.connect();
 		stream.write_all(b"hey").await.unwrap();
-		stream.close_sender();
+		// stream.close_sender();
 		let mut v = vec![];
-		stream.read_to_end(&mut v).await.unwrap();
+		stream.read_buf(&mut v).await.unwrap();
 		assert_eq!(v, b"hey");
+
+		tracing::info!("received hey");
+
+		stream.close_sender();
 
 		join_handle.join().unwrap();
 	}
