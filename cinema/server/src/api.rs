@@ -3,13 +3,12 @@ use crate::error::Error;
 
 use core_lib::users::Token;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use postgres::UniqueId;
 
-use fire_api::{Request, Method};
 use fire_api::stream::{Stream, StreamKind};
-
+use fire_api::{Method, Request};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,7 +17,7 @@ pub struct EntriesReq;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Entries {
-	pub list: Vec<Entry>
+	pub list: Vec<Entry>,
 }
 
 impl Request for EntriesReq {
@@ -33,13 +32,13 @@ impl Request for EntriesReq {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProgressReq {
-	pub token: Token
+	pub token: Token,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ProgressMsg {
 	Movie(MovieProgress),
-	Series(SeriesProgress)
+	Series(SeriesProgress),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,7 +46,7 @@ pub enum ProgressMsg {
 pub struct MovieProgress {
 	pub id: UniqueId,
 	pub percent: f32,
-	pub position: f32
+	pub position: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,7 +56,7 @@ pub struct SeriesProgress {
 	pub season: u32,
 	pub episode: u32,
 	pub percent: f32,
-	pub position: f32
+	pub position: f32,
 }
 
 // stream is on /api/cinema/stream

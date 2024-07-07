@@ -1,16 +1,13 @@
-
 const MAX_LEN: usize = 200;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IndexedVec<T> {
-	inner: Vec<Option<T>>
+	inner: Vec<Option<T>>,
 }
 
 impl<T: Clone> IndexedVec<T> {
 	pub fn new() -> Self {
-		Self {
-			inner: vec![]
-		}
+		Self { inner: vec![] }
 	}
 
 	pub fn get_mut(&mut self, idx: usize) -> &mut Option<T> {
@@ -29,13 +26,15 @@ impl<T: Clone> IndexedVec<T> {
 
 	/// Converts everything until a item is missing
 	pub fn into_contiguous_map<F, O>(self, f: F) -> Vec<O>
-	where F: Fn(T) -> O {
+	where
+		F: Fn(T) -> O,
+	{
 		let mut ve = Vec::with_capacity(self.inner.len());
 		for v in self.inner {
 			if let Some(v) = v {
 				ve.push(f(v));
 			} else {
-				return ve
+				return ve;
 			}
 		}
 

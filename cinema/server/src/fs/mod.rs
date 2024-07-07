@@ -1,67 +1,56 @@
 mod read;
-mod util;
 pub(super) mod route;
+mod util;
 
 use super::data;
 use crate::CinemaConf;
 
-use std::io;
 use std::collections::HashMap;
+use std::io;
 
-use postgres::UniqueId;
 use postgres::time::DateTime;
-
+use postgres::UniqueId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct EntryId {
 	kind: EntryKind,
-	name: String
+	name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum EntryKind {
 	Movie,
-	Series
+	Series,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Entry {
-	Movie {
-		name: String,
-		year: u32
-	},
-	Series {
-		name: String,
-		seasons: Vec<Season>
-	}
+	Movie { name: String, year: u32 },
+	Series { name: String, seasons: Vec<Season> },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Season {
 	name: Option<String>,
-	episodes: Vec<String>
+	episodes: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 enum UpdatedOnData {
-	Movie {
-		updated_on: DateTime
-	},
-	Series {
-		seasons: Vec<Vec<DateTime>>
-	}
+	Movie { updated_on: DateTime },
+	Series { seasons: Vec<Vec<DateTime>> },
 }
 
 #[derive(Debug, Clone)]
 pub(super) enum EntryChange {
 	Insert(data::Entry),
 	Update(data::Entry),
-	Remove(UniqueId)
+	Remove(UniqueId),
 }
 
 pub(super) async fn changes_from_fs(
 	data_entries: &[data::Entry],
-	cfg: &CinemaConf
+	cfg: &CinemaConf,
 ) -> io::Result<Vec<EntryChange>> {
 	let mut entries = convert_entries(data_entries);
 
@@ -74,12 +63,12 @@ pub(super) async fn changes_from_fs(
 			Some((uid, db_entry)) => {
 				if entry == db_entry {
 					// the entries are the same don't do any change
-					continue
+					continue;
 				}
 
 				let data_entry = entry.into_data(updated_on, uid);
 				changes.push(EntryChange::Update(data_entry));
-			},
+			}
 			None => {
 				// entry does not exist create a new one
 				let data_entry = entry.into_data(updated_on, UniqueId::new());
@@ -97,7 +86,7 @@ pub(super) async fn changes_from_fs(
 }
 
 fn convert_entries(
-	entries: &[data::Entry]
+	entries: &[data::Entry],
 ) -> HashMap<EntryId, (UniqueId, Entry)> {
 	let mut map = HashMap::with_capacity(entries.len());
 
@@ -106,30 +95,36 @@ fn convert_entries(
 			data::Entry::Movie(m) => {
 				let id = EntryId {
 					kind: EntryKind::Movie,
-					name: m.name.clone()
+					name: m.name.clone(),
 				};
 
 				let entry = Entry::Movie {
 					name: m.name.clone(),
-					year: m.year
+					year: m.year,
 				};
 
 				map.insert(id, (m.id, entry));
-			},
+			}
 			data::Entry::Series(s) => {
 				let id = EntryId {
 					kind: EntryKind::Series,
-					name: s.name.clone()
+					name: s.name.clone(),
 				};
 
 				let entry = Entry::Series {
 					name: s.name.clone(),
-					seasons: s.seasons.iter().map(|s| Season {
-						name: s.name.clone(),
-						episodes: s.episodes.iter()
-							.map(|e| e.name.clone())
-							.collect()
-					}).collect()
+					seasons: s
+						.seasons
+						.iter()
+						.map(|s| Season {
+							name: s.name.clone(),
+							episodes: s
+								.episodes
+								.iter()
+								.map(|e| e.name.clone())
+								.collect(),
+						})
+						.collect(),
 				};
 
 				map.insert(id, (s.id, entry));
@@ -145,42 +140,49 @@ impl Entry {
 		match (self, updated_on) {
 			(
 				Entry::Movie { name, year },
-				UpdatedOnData::Movie { updated_on }
-			) => {
-				data::Entry::Movie(data::Movie {
-					id, name, year, updated_on,
-					progress: None
-				})
-			},
+				UpdatedOnData::Movie { updated_on },
+			) => data::Entry::Movie(data::Movie {
+				id,
+				name,
+				year,
+				updated_on,
+				progress: None,
+			}),
 			(
 				Entry::Series { name, seasons },
-				UpdatedOnData::Series { seasons: updated_on_seasons }
+				UpdatedOnData::Series {
+					seasons: updated_on_seasons,
+				},
 			) => {
 				assert_eq!(seasons.len(), updated_on_seasons.len());
 
 				data::Entry::Series(data::Series {
-					id, name,
-					seasons: seasons.into_iter()
+					id,
+					name,
+					seasons: seasons
+						.into_iter()
 						.zip(updated_on_seasons.into_iter())
 						.map(|(s, u)| {
 							assert_eq!(s.episodes.len(), u.len());
 
 							data::Season {
 								name: s.name,
-								episodes: s.episodes.into_iter()
+								episodes: s
+									.episodes
+									.into_iter()
 									.zip(u.into_iter())
 									.map(|(e, u)| data::Episode {
 										name: e,
 										updated_on: u,
-										progress: None
+										progress: None,
 									})
-									.collect()
+									.collect(),
 							}
 						})
-						.collect()
+						.collect(),
 				})
-			},
-			_ => unreachable!()
+			}
+			_ => unreachable!(),
 		}
 	}
 }
