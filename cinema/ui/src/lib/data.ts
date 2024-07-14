@@ -1,27 +1,42 @@
-import { padZero, sortToHigher, sortToLower, match } from 'fire/util.js';
-import { entries as entriesApi, MIN_PERCENT, MAX_PERCENT } from './api.js';
+import { padZero, sortToHigher, sortToLower } from 'chuchi-utils';
+import {
+	entries as entriesApi,
+	MIN_PERCENT,
+	MAX_PERCENT,
+	Entry as ApiEntry,
+	ProgressStream,
+	Movie,
+	Series,
+	Season,
+	Episode,
+} from './api.js';
+import DateTime from 'chuchi-legacy/time/DateTime';
+import { searchScore } from 'chuchi-utils/search';
 
 class Entries {
+	list: Entry[];
+
 	/// entries: [Entry]
-	constructor(entries) {
+	constructor(entries: ApiEntry[]) {
 		this.list = entries.map(e => new Entry(e));
 	}
 
-	get(id) {
+	get(id: string) {
 		return this.list.find(e => e.id() == id) ?? null;
 	}
 
-	toDashboard() {
+	toDashboard(): DashboardEntries {
 		return new DashboardEntries(this);
 	}
 
-	search(val) {
+	search(val: string) {
 		const filter = new SearchFilter(val);
 
-		return this.list.map(e => {
-			const score = filter.match(e);
-			return [score, e];
-		})
+		return this.list
+			.map(e => {
+				const score = filter.match(e);
+				return [score, e] as [number, Entry];
+			})
 			.filter(([score, e]) => score !== 0)
 			.sort((a, b) => {
 				return filter.sort(a, b);
@@ -31,6 +46,11 @@ class Entries {
 }
 
 class SearchFilter {
+	private raw: string;
+	private text: string;
+
+	kind: 'Movie' | 'Series' | null;
+	order: { field: 'Year' | 'Updated'; order: 'Asc' | 'Desc' } | null;
 	// we need to parse filter and ordering
 	// kind:movie
 	// k:m
@@ -38,7 +58,7 @@ class SearchFilter {
 	// order:year
 	// o:y
 	// order:year:asc
-	constructor(s) {
+	constructor(s: string) {
 		this.raw = s;
 
 		// Movie|Series|null
@@ -51,20 +71,17 @@ class SearchFilter {
 		this._parse(s);
 	}
 
-	match(e) {
+	match(e: Entry): number {
 		// lets first apply the filter
-		if (this.kind && e.kind !== this.kind)
-			return 0;
+		if (this.kind && e.kind !== this.kind) return 0;
 
-		if (!this.text)
-			return 1;
+		if (!this.text) return 1;
 
 		return e.match(this.text);
 	}
 
-	sort([aScore, ae], [bScore, be]) {
-		if (!this.order)
-			return sortToHigher(aScore, bScore);
+	sort([aScore, ae]: [number, Entry], [bScore, be]: [number, Entry]): number {
+		if (!this.order) return sortToHigher(aScore, bScore);
 
 		let prevOrder = 0;
 
@@ -72,9 +89,9 @@ class SearchFilter {
 		let av = null;
 		let bv = null;
 		if (field === 'Year') {
-			if (ae.kind === 'Movie' && be.kind === 'Movie') {
-				av = ae.data.year();
-				bv = be.data.year();
+			if (ae.inner.kind === 'Movie' && be.inner.kind === 'Movie') {
+				av = ae.inner.data.year();
+				bv = be.inner.data.year();
 			}
 		} else if (field === 'Updated') {
 			av = ae.updatedOn().time;
@@ -82,53 +99,47 @@ class SearchFilter {
 		}
 
 		if (av && bv) {
-			if (order === 'Asc')
-				prevOrder = sortToHigher(av, bv);
-			else
-				prevOrder = sortToLower(av, bv);
+			if (order === 'Asc') prevOrder = sortToHigher(av, bv);
+			else prevOrder = sortToLower(av, bv);
 		}
 
-		if (prevOrder !== 0)
-			return prevOrder;
+		if (prevOrder !== 0) return prevOrder;
 
 		return sortToHigher(aScore, bScore);
 	}
 
-	_parse(s) {
+	private _parse(s: string) {
 		const text = [];
 
 		for (const word of s.split(' ')) {
 			const filter = word.toLowerCase().split(':');
 			if (filter.length === 1 || filter.some(f => !f.length)) {
 				text.push(word);
-				continue
+				continue;
 			}
 
 			const k = filter[0];
 			const v = filter[1];
-			let add = filter[2] ?? null;
+			const add = filter[2] ?? null;
+			let order: 'Asc' | 'Desc';
 
 			switch (k) {
 				case 'k':
 				case 'kind':
-					if (v.startsWith('m'))
-						this.kind = 'Movie';
-					else if (v.startsWith('s'))
-						this.kind = 'Series';
+					if (v.startsWith('m')) this.kind = 'Movie';
+					else if (v.startsWith('s')) this.kind = 'Series';
 					console.log('invalid value for kind', v);
 					break;
 
 				case 'o':
 				case 'order':
-					if (add && add.startsWith('a'))
-						add = 'Asc';
-					else
-						add = 'Desc';
+					if (add && add.startsWith('a')) order = 'Asc';
+					else order = 'Desc';
 
 					if (v.startsWith('y'))
-						this.order = { field: 'Year', order: add };
+						this.order = { field: 'Year', order };
 					else if (v.startsWith('u'))
-						this.order = { field: 'Updated', order: add };
+						this.order = { field: 'Updated', order };
 					break;
 			}
 		}
@@ -140,8 +151,15 @@ class SearchFilter {
 const IS_NEWEST = 2 * 7 * 24 * 60 * 60 * 1000;
 
 export class DashboardEntries {
+	inner: Entries;
+	lastWatched: Entry | null;
+	watchLater: Entry[];
+	newest: Entry[];
+	movies: Entry[];
+	series: Entry[];
+
 	// entries: Entries
-	constructor(entries) {
+	constructor(entries: Entries) {
 		this.inner = entries;
 
 		this.lastWatched = null;
@@ -154,13 +172,13 @@ export class DashboardEntries {
 		this._sort();
 	}
 
-	_replaceLastWatched(entry) {
+	_replaceLastWatched(entry: Entry) {
 		let prev = this.lastWatched;
 		this.lastWatched = entry;
 		return prev;
 	}
 
-	_splitEntries(list) {
+	_splitEntries(list: Entry[]) {
 		let lastWatchedTime = null;
 		list.forEach(entry => {
 			let updatedOn = entry.progressUpdatedOn();
@@ -171,8 +189,7 @@ export class DashboardEntries {
 			) {
 				lastWatchedTime = updatedOn;
 				entry = this._replaceLastWatched(entry);
-				if (!entry)
-					return;
+				if (!entry) return;
 			}
 
 			// categories to other categories
@@ -220,183 +237,206 @@ export class DashboardEntries {
 	}
 }
 
-
 let entries = null;
 
-export async function loadEntries(token) {
-	if (entries)
-		return new Entries(entries.list);
+export async function loadEntries(token: string) {
+	if (entries) return new Entries(entries.list);
 
 	entries = await entriesApi(token);
 	return new Entries(entries.list);
 }
 
-export async function loadEntry(id, token) {
+export async function loadEntry(id: string, token: string) {
 	const entrs = await loadEntries(token);
 	return entrs.get(id);
 }
 
+type EntryInner =
+	| { kind: 'Movie'; data: MovieEntry }
+	| { kind: 'Series'; data: SeriesEntry };
+
 export class Entry {
 	/// entry: Entry
-	constructor(entry) {
-		this.kind = entry.kind;
-		switch (entry.kind) {
+	inner: EntryInner;
+
+	constructor(entry: ApiEntry) {
+		switch (entry.inner.kind) {
 			case 'Movie':
-				this.data = new MovieEntry(entry.data);
+				this.inner = {
+					kind: 'Movie',
+					data: new MovieEntry(entry.inner.data),
+				};
 				break;
 			case 'Series':
-				this.data = new SeriesEntry(entry.data);
+				this.inner = {
+					kind: 'Series',
+					data: new SeriesEntry(entry.inner.data),
+				};
 				break;
 		}
 	}
 
-	id() {
+	get kind(): string {
+		return this.inner.kind;
+	}
+
+	get data(): MovieEntry | SeriesEntry {
+		return this.inner.data;
+	}
+
+	id(): string {
 		return this.data.id();
 	}
 
-	title() {
+	title(): string {
 		return this.data.title();
 	}
 
-	currentShortTitle() {
+	currentShortTitle(): string {
 		return this.data.currentShortTitle();
 	}
 
-	currentTitle() {
+	currentTitle(): string {
 		return this.data.currentTitle();
 	}
 
-	match(val) {
+	match(val: string): number {
 		return this.data.match(val);
 	}
 
-	poster() {
+	poster(): string {
 		return this.data.inner.poster();
 	}
 
-	fullPoster() {
+	fullPoster(): string {
 		return this.data.inner.fullPoster();
 	}
 
-	src() {
+	src(): string {
 		return this.data.src();
 	}
 
 	// when was the movie or series last updated
-	updatedOn() {
+	updatedOn(): DateTime {
 		return this.data.inner.getUpdatedOn();
 	}
 
 	// might return null
-	progressUpdatedOn() {
+	progressUpdatedOn(): DateTime | null {
 		return this.data.inner.progressUpdatedOn();
 	}
 
-	percent() {
+	percent(): number {
 		return this.data.percent();
 	}
 
-	currentPercent() {
+	currentPercent(): number {
 		return this.data.currentPercent();
 	}
 
-	position() {
+	position(): number {
 		return this.data.position();
 	}
 
-	creditsPercent(totalLen) {
+	creditsPercent(totalLen: number): number {
 		return this.data.creditsPercent(totalLen);
 	}
 
-	creditsTime(totalLen) {
+	creditsTime(totalLen: number): number {
 		return this.data.creditsTime(totalLen);
 	}
 
 	// this returns the progress percentage without the last few seconds
 	// which can be skipped
-	calcPercent(position, totalLen) {
+	calcPercent(position: number, totalLen: number): number {
 		const perc = this.data.calcPercent(position, totalLen);
 		return Math.max(Math.min(perc, 1), 0);
 	}
 
-	setProgress(percent, position) {
+	setProgress(percent: number, position: number) {
 		this.data.setProgress(percent, position);
 	}
 
-	sendProgress(stream) {
+	sendProgress(stream: ProgressStream) {
 		this.data.sendProgress(stream);
 	}
 }
 
 export class MovieEntry {
-	constructor(movie) {
+	inner: Movie;
+
+	constructor(movie: Movie) {
 		this.inner = movie;
 	}
 
-	id() {
+	id(): string {
 		return this.inner.id;
 	}
 
-	title() {
+	title(): string {
 		return this.inner.title();
 	}
 
-	year() {
+	year(): number {
 		return this.inner.year;
 	}
 
-	currentShortTitle() {
+	currentShortTitle(): string {
 		return this.title();
 	}
 
-	currentTitle() {
+	currentTitle(): string {
 		return this.title();
 	}
 
-	match(val) {
-		return match(val, this.title());
+	match(val: string): number {
+		return searchScore(val, this.title());
 	}
 
-	src() {
+	src(): string {
 		return this.inner.src();
 	}
 
-	percent() {
+	percent(): number {
 		return this.inner.percent();
 	}
 
-	currentPercent() {
+	currentPercent(): number {
 		return this.percent();
 	}
 
-	position() {
+	position(): number {
 		return this.inner.position();
 	}
 
-	creditsPercent(totalLen) {
+	creditsPercent(totalLen: number): number {
 		return this.inner.creditsDuration(totalLen) / totalLen;
 	}
 
-	creditsTime(totalLen) {
+	creditsTime(totalLen: number): number {
 		return totalLen - this.inner.creditsDuration(totalLen);
 	}
 
-	calcPercent(position, totalLen) {
+	calcPercent(position: number, totalLen: number): number {
 		return position / this.creditsTime(totalLen);
 	}
 
-	setProgress(percent, position) {
+	setProgress(percent: number, position: number) {
 		this.inner.setProgress(percent, position);
 	}
 
-	sendProgress(stream) {
+	sendProgress(stream: ProgressStream) {
 		this.inner.sendProgress(stream);
 	}
 }
 
 export class SeriesEntry {
+	inner: Series;
+	cSeason: number;
+	cEpisode: number;
+
 	// series: Series
-	constructor(series) {
+	constructor(series: Series) {
 		this.inner = series;
 		this.cSeason = 0;
 		this.cEpisode = 0;
@@ -412,30 +452,30 @@ export class SeriesEntry {
 			if (ep !== -1) {
 				this.cSeason = se;
 				this.cEpisode = ep;
-				break
+				break;
 			}
 		}
 	}
 
-	seasons() {
+	seasons(): Season[] {
 		return this.inner.seasons;
 	}
 
-	season() {
+	season(): Season {
 		return this.inner.seasons[this.cSeason];
 	}
 
-	episode() {
+	episode(): Episode {
 		return this.inner.seasons[this.cSeason].episodes[this.cEpisode];
 	}
 
-	setEpisode(seasonIdx, episodeIdx) {
+	setEpisode(seasonIdx: number, episodeIdx: number) {
 		this.cSeason = seasonIdx;
 		this.cEpisode = episodeIdx;
 	}
 
 	/// returns null or [season, episode]
-	nextEpisode() {
+	nextEpisode(): [number, number] | null {
 		// check if we can move to next episode (not season)
 		if (this.cEpisode + 1 < this.season().episodes.length)
 			return [this.cSeason, this.cEpisode + 1];
@@ -447,77 +487,76 @@ export class SeriesEntry {
 		return null;
 	}
 
-	id() {
+	id(): string {
 		return this.inner.id;
 	}
 
-	title() {
+	title(): string {
 		return this.inner.name;
 	}
 
-	currentShortTitle() {
+	currentShortTitle(): string {
 		const ep = this.episode();
 		const season = padZero(this.cSeason + 1);
 		const episode = padZero(this.cEpisode + 1);
 		return `S${season}E${episode} ${ep.name}`;
 	}
 
-	currentTitle() {
+	currentTitle(): string {
 		return `${this.title()} ${this.currentShortTitle()}`;
 	}
 
-	match(val) {
-		return match(val, this.title());
+	match(val: string): number {
+		return searchScore(val, this.title());
 	}
 
 	// menu
 	// video src
 	// position
 
-	src() {
+	src(): string {
 		return this.inner.src(this.cSeason, this.cEpisode);
 	}
 
-	percent() {
+	percent(): number {
 		const l = this.inner.seasons.length;
 		return this.inner.seasons.reduce((t, c) => c.totalPercent() / l + t, 0);
 	}
 
-	currentPercent() {
+	currentPercent(): number {
 		return this.inner.percent(this.cSeason, this.cEpisode);
 	}
 
-	position() {
+	position(): number {
 		return this.inner.position(this.cSeason, this.cEpisode);
 	}
 
-	creditsPercent(totalLen) {
+	creditsPercent(totalLen: number): number {
 		const dur = this.inner.creditsDuration(
 			this.cSeason,
 			this.cEpisode,
-			totalLen
+			totalLen,
 		);
 		return dur / totalLen;
 	}
 
-	creditsTime(totalLen) {
-		return totalLen - this.inner.creditsDuration(
-			this.cSeason,
-			this.cEpisode,
-			totalLen
+	creditsTime(totalLen: number): number {
+		return (
+			totalLen -
+			this.inner.creditsDuration(this.cSeason, this.cEpisode, totalLen)
 		);
 	}
 
-	calcPercent(position, totalLen) {
+	calcPercent(position: number, totalLen: number): number {
 		// 2 minutes
 		return position / this.creditsTime(totalLen);
 	}
 
-	setProgress(percent, position) {
+	setProgress(percent: number, position: number) {
 		this.inner.setProgress(this.cSeason, this.cEpisode, percent, position);
 	}
 
-	sendProgress(stream) {
+	sendProgress(stream: ProgressStream) {
 		this.inner.sendProgress(stream, this.cSeason, this.cEpisode);
 	}
 }

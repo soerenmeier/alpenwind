@@ -7,7 +7,6 @@
 	// also in percent but from the right (so meaning how long are the credits)
 	export let credits = 0;
 
-
 	let cont;
 
 	let offset = 0;
@@ -32,8 +31,7 @@
 	}
 
 	function onMouseMove(e) {
-		if (!down)
-			return;
+		if (!down) return;
 
 		update(e.clientX);
 	}
@@ -43,8 +41,7 @@
 	}
 
 	function onMouseUp(e) {
-		if (!down)
-			return;
+		if (!down) return;
 
 		down = false;
 		e.preventDefault();
@@ -77,6 +74,7 @@
 	on:mousedown={onMouseDown}
 	on:touchstart={onTouchStart}
 	bind:this={cont}
+	role="none"
 >
 	<span class="bar"></span>
 	<span class="cursor"></span>
@@ -105,11 +103,12 @@
 		width: 100%;
 		height: 2px;
 		background-color: #fff;
-		transition: transform .2s ease;
+		transition: transform 0.2s ease;
 	}
 
-	.bar::before, .bar::after {
-		content: "";
+	.bar::before,
+	.bar::after {
+		content: '';
 		position: absolute;
 		top: 0;
 		height: 100%;

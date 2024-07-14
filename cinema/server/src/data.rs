@@ -1,5 +1,5 @@
-use postgres::time::DateTime;
-use postgres::UniqueId;
+use chuchi_postgres::time::DateTime;
+use chuchi_postgres::UniqueId;
 
 use serde::{Deserialize, Serialize};
 

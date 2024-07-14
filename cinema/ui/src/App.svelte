@@ -1,8 +1,5 @@
 <script>
-	import { getContext, tick } from 'svelte';
-	import { timeout } from 'fire/util.js';
-	import { stream } from './lib/api.js';
-	import { loadEntries } from './lib/data.js';
+	import { loadEntries } from './lib/data.ts';
 	import Cover from './ui/cover.svelte';
 	import { getCore } from 'core-lib';
 	import BackBtn from 'core-lib-ui/BackBtn';

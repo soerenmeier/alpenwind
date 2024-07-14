@@ -8,8 +8,8 @@ use crate::CinemaConf;
 use std::collections::HashMap;
 use std::io;
 
-use postgres::time::DateTime;
-use postgres::UniqueId;
+use chuchi_postgres::time::DateTime;
+use chuchi_postgres::UniqueId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct EntryId {

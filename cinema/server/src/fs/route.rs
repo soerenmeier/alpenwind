@@ -5,13 +5,13 @@ use std::path::{Path, PathBuf};
 use std::result::Result as StdResult;
 use std::sync::OnceLock;
 
-use fire::error::{ClientErrorKind, ServerErrorKind};
-use fire::extractor::{PathParam, PathStr};
-use fire::fs::{serve_file, Caching, IntoPathBuf};
-use fire::header::{Method, RequestHeader};
-use fire::routes::Route;
-use fire::util::PinnedFuture;
-use fire::{get, Error, FireBuilder, Request, Response, Result};
+use chuchi::error::{ClientErrorKind, ServerErrorKind};
+use chuchi::extractor::{PathParam, PathStr};
+use chuchi::fs::{serve_file, Caching, IntoPathBuf};
+use chuchi::header::{Method, RequestHeader};
+use chuchi::routes::Route;
+use chuchi::util::PinnedFuture;
+use chuchi::{get, Chuchi, Error, Request, Response, Result};
 
 use core_lib::users::Users;
 
@@ -323,7 +323,7 @@ fn scale_sync(
 	image.save(scaled_path)
 }
 
-pub(crate) fn add_routes(server: &mut FireBuilder) {
+pub(crate) fn add_routes(server: &mut Chuchi) {
 	server.add_route(get_movies);
 	server.add_route(get_posters_movies);
 	server.add_route(get_full_posters_movies);

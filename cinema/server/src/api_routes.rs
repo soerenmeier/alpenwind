@@ -6,11 +6,11 @@ use crate::{CinemaDb, Config};
 
 use core_lib::users::Users;
 
-use fire::header::RequestHeader;
-use fire::{api, api_stream, FireBuilder};
-use fire_api::stream::{StreamError, StreamServer, Streamer};
+use chuchi::api::stream::{StreamError, StreamServer, Streamer};
+use chuchi::header::RequestHeader;
+use chuchi::{api, api_stream, Chuchi};
 
-use postgres::time::DateTime;
+use chuchi_postgres::time::DateTime;
 use tracing::info;
 
 #[api(EntriesReq)]
@@ -105,7 +105,7 @@ pub async fn progress(
 //
 
 pub(crate) fn add_routes(
-	server: &mut FireBuilder,
+	server: &mut Chuchi,
 	stream_server: &mut StreamServer,
 	cfg: &Config,
 ) {

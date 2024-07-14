@@ -1,15 +1,15 @@
 <script>
 	import { getContext, onDestroy } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import { padZero } from 'fire/util.js';
+	import { padZero } from 'chuchi-utils';
 
 	import BackBtn from 'core-lib-ui/BackBtn';
 	import MenuBtn from 'core-lib-ui/MenuBtn';
 
-	import { newProgressStream, bgImg } from './lib/api.js';
-	import { loadEntry } from './lib/data.js';
+	import { newProgressStream, bgImg } from './lib/api.ts';
+	import { loadEntry } from './lib/data.ts';
 	import SeekBar from './ui/seekbar.svelte';
-	import Video from './ui/video.js';
+	import Video from './ui/video.ts';
 	import SelectOverlay from './ui/selectoverlay.svelte';
 	import { getCore } from 'core-lib';
 

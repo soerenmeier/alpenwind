@@ -1,10 +1,10 @@
-import Listeners from 'fire/util/listeners.js';
+import Listeners from 'chuchi-utils/sync/Listeners';
 
-export function waitOnce(listeners) {
+export function waitOnce<R>(listeners: Listeners<[R]>): Promise<R> {
 	return new Promise(res => {
-		const rmFn = listeners.add(() => {
+		const rmFn = listeners.add(t => {
 			rmFn();
-			res();
+			res(t);
 		});
 	});
 }
@@ -18,17 +18,25 @@ export function waitOnce(listeners) {
 /// await readyProm;
 /// ```
 export default class Video {
+	el: HTMLVideoElement;
+	waitingOnMetadata: boolean;
+	setPositionOnMetadataLoaded: number;
+
+	canplayListeners: Listeners<[Event]>;
+	errorListeners: Listeners<[Event]>;
+	onPositionListeners: Listeners<[Event]>;
+
 	constructor() {
 		this.el = document.createElement('video');
 		this.waitingOnMetadata = true;
 		this.setPositionOnMetadataLoaded = 0;
 
-		this.canplayListeners = new Listeners;
-		this.errorListeners = new Listeners;
-		this.onPositionListeners = new Listeners;
+		this.canplayListeners = new Listeners();
+		this.errorListeners = new Listeners();
+		this.onPositionListeners = new Listeners();
 	}
 
-	bind(cont) {
+	bind(cont: HTMLElement) {
 		cont.appendChild(this.el);
 
 		this.el.addEventListener('loadedmetadata', e => {
@@ -43,12 +51,11 @@ export default class Video {
 			this.errorListeners.trigger(e);
 		});
 		this.el.addEventListener('timeupdate', e => {
-			if (!this.waitingOnMetadata)
-				this.onPositionListeners.trigger(e);
+			if (!this.waitingOnMetadata) this.onPositionListeners.trigger(e);
 		});
 	}
 
-	onPositionUpdate(fn) {
+	onPositionUpdate(fn: (e: Event) => void) {
 		return this.onPositionListeners.add(fn);
 	}
 
@@ -60,7 +67,7 @@ export default class Video {
 			rmCanplay = this.canplayListeners.add(() => {
 				rmError();
 				rmCanplay();
-				res();
+				res(undefined);
 			});
 			rmError = this.errorListeners.add(e => {
 				rmCanplay();
@@ -75,7 +82,7 @@ export default class Video {
 			throw new Error('canplay was not triggered');
 	}
 
-	setSrc(src, newPosition) {
+	setSrc(src: string, newPosition: number) {
 		// the same source, let's just update the position
 		if (this.el.src === src) {
 			this.el.currentTime = newPosition;
@@ -98,29 +105,29 @@ export default class Video {
 		return this.el.currentTime;
 	}
 
-	setPosition(pos) {
+	setPosition(pos: number) {
 		this.assertReady();
 		this.el.currentTime = pos;
 	}
 
-	len() {
+	len(): number {
 		this.assertReady();
 		return this.el.duration;
 	}
 
-	progress() {
+	progress(): number {
 		return this.position() / this.len();
 	}
 
-	setProgress(prog) {
+	setProgress(prog: number) {
 		this.setPosition(prog * this.len());
 	}
 
-	remainingTime() {
+	remainingTime(): number {
 		return this.len() - this.position();
 	}
 
-	isPlaying() {
+	isPlaying(): boolean {
 		this.assertReady();
 		return !this.el.paused;
 	}
@@ -135,11 +142,11 @@ export default class Video {
 		this.el.pause();
 	}
 
-	forward(secs) {
+	forward(secs: number) {
 		this.setPosition(Math.min(this.len(), this.position() + secs));
 	}
 
-	reverse(secs) {
+	reverse(secs: number) {
 		this.setPosition(Math.max(0, this.position() - secs));
 	}
 }

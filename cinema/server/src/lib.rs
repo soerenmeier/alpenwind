@@ -21,10 +21,10 @@ use core_lib::config::DbConf;
 use core_lib::users::Users;
 use core_lib::{init_fn, Core};
 
-use fire::Resource;
+use chuchi::Resource;
 use serde::{Deserialize, Serialize};
 
-use fire_api::stream::StreamServer;
+use chuchi::api::stream::StreamServer;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Config {
@@ -65,7 +65,7 @@ async fn init(core: Core) {
 
 	// open database
 	let db_cfg = &cfg.database;
-	let db = postgres::Database::with_host(
+	let db = chuchi_postgres::Database::with_host(
 		&db_cfg.host,
 		&db_cfg.name,
 		&db_cfg.user,
@@ -77,12 +77,12 @@ async fn init(core: Core) {
 	let users = Users::new(&db, core.sessions).await;
 	let cinema = CinemaDb::new(&db).await;
 
-	let mut server = core_lib::fire::build().await;
+	let mut server = core_lib::chuchi::build().await;
 	let mut stream_server = StreamServer::new("/api/cinema/stream");
 
-	server.add_data(users);
-	server.add_data(cinema);
-	server.add_data(cfg.cinema.clone());
+	server.add_resource(users);
+	server.add_resource(cinema);
+	server.add_resource(cfg.cinema.clone());
 
 	assets::add_routes(&mut server);
 	api_routes::add_routes(&mut server, &mut stream_server, &cfg);
@@ -93,12 +93,12 @@ async fn init(core: Core) {
 	let on_terminate = core.on_terminate.clone();
 	tokio::try_join! {
 		bg_task::bg_task(
-			server.data().clone(),
+			server.resources().clone(),
 			cfg.cinema,
 			core.on_terminate.clone()
 		),
 		tokio::spawn(async move {
-			core_lib::fire::ignite(
+			core_lib::chuchi::ignite(
 				server,
 				core.listener,
 				on_terminate

@@ -1,5 +1,5 @@
 <script>
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 	import { slide as svelteSlide } from 'svelte/transition';
 	import { cubicInOut } from 'svelte/easing';
 	import CloseBtn from 'core-lib-ui/CloseBtn';

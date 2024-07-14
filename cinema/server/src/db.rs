@@ -3,13 +3,13 @@ use super::data;
 use std::collections::HashMap;
 use std::fmt::Write;
 
-use fire::Resource;
-use postgres::json::Json;
-use postgres::row::ToRow;
-use postgres::table::TableOwned;
-use postgres::time::DateTime;
-use postgres::{filter, try2, whr, FromRow, ToRow};
-use postgres::{Database, Result, TableTempl, UniqueId};
+use chuchi::Resource;
+use chuchi_postgres::json::Json;
+use chuchi_postgres::row::ToRow;
+use chuchi_postgres::table::TableOwned;
+use chuchi_postgres::time::DateTime;
+use chuchi_postgres::{filter, try2, whr, FromRow, ToRow};
+use chuchi_postgres::{Database, Result, TableTempl, UniqueId};
 
 use serde::{Deserialize, Serialize};
 

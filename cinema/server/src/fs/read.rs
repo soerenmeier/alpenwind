@@ -8,7 +8,7 @@ use std::str::FromStr;
 
 use tokio::fs::{self, DirEntry};
 
-use postgres::time::DateTime;
+use chuchi_postgres::time::DateTime;
 
 use lazy_static::lazy_static;
 use regex::Regex;

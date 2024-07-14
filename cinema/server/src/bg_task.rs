@@ -3,7 +3,7 @@ use crate::error::{Error, Result};
 use crate::fs::{changes_from_fs, EntryChange};
 use crate::CinemaConf;
 
-use fire::resources::Resources;
+use chuchi::resources::Resources;
 use tokio::task::JoinHandle;
 use tokio::time::{self, Duration};
 

@@ -5,10 +5,10 @@ use core_lib::users::Token;
 
 use serde::{Deserialize, Serialize};
 
-use postgres::UniqueId;
+use chuchi_postgres::UniqueId;
 
-use fire_api::stream::{Stream, StreamKind};
-use fire_api::{Method, Request};
+use chuchi::api::stream::{Stream, StreamKind};
+use chuchi::api::{Method, Request};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
