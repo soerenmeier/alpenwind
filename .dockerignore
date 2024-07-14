@@ -2,21 +2,22 @@
 /design
 /dist
 /images
+/target
 
-/core/server/target
 /core/server/config.toml
 /core/ui/dist
 /core/ui/node_modules
 
-/core-lib/build/target
-/core-lib/build/Cargo.lock
-/core-lib/js/dist/node_modules
-/core-lib/lib/target
-/core-lib/lib/Cargo.lock
+/core-lib/js/dist
+/core-lib/js/node_modules
+/core-lib/ui/dist
 /core-lib/ui/node_modules
 
-/pwvault/server/target
+/cinema/ui/dist
+/cinema/ui/node_modules
+
 /pwvault/ui/dist
 /pwvault/ui/node_modules
 
 /serverstats
+/setup

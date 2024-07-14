@@ -1,5 +1,5 @@
 ## Build
-FROM soerenmeier/fire-build as build
+FROM soerenmeier/chuchi-build as build
 
 COPY --chown=build . .
 
@@ -7,7 +7,7 @@ RUN riji npm_ci
 RUN riji build_all
 
 ## release
-FROM soerenmeier/fire-release
+FROM soerenmeier/chuchi-release
 
 COPY --chown=release --from=build /home/build/dist/ .
 
