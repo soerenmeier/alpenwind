@@ -1,11 +1,10 @@
 use std::fmt;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use fire_api::error::{ApiError, Error as ErrorTrait, StatusCode};
+use chuchi::api::error::{self, Error as ApiError, StatusCode};
 
 use core_lib::users;
-
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -18,28 +17,35 @@ pub enum Error {
 	InvalidDataToken,
 	InvalidUser,
 	Internal(String),
-	Request(String)
+	Request(String),
 }
 
-impl ApiError for Error {
-	fn internal<E: ErrorTrait>(e: E) -> Self {
-		Self::Internal(e.to_string())
-	}
-
-	fn request<E: ErrorTrait>(e: E) -> Self {
-		Self::Request(e.to_string())
+impl error::ApiError for Error {
+	fn from_error(e: ApiError) -> Self {
+		match e {
+			ApiError::HeadersMissing(_) | ApiError::Deserialize(_) => {
+				Self::Request(e.to_string())
+			}
+			ApiError::ExtractionError(e) => {
+				// we should check if the type is Error
+				e.downcast()
+					.map(|e| *e)
+					.unwrap_or_else(|e| Self::Internal(e.to_string()))
+			}
+			e => Self::Internal(e.to_string()),
+		}
 	}
 
 	fn status_code(&self) -> StatusCode {
 		match self {
-			Self::LoginIncorrect |
-			Self::MissingAuthToken |
-			Self::InvalidAuthToken |
-			Self::MissingDataToken |
-			Self::InvalidDataToken |
-			Self::InvalidUser => StatusCode::FORBIDDEN,
+			Self::LoginIncorrect
+			| Self::MissingAuthToken
+			| Self::InvalidAuthToken
+			| Self::MissingDataToken
+			| Self::InvalidDataToken
+			| Self::InvalidUser => StatusCode::FORBIDDEN,
 			Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
-			Self::Request(_) => StatusCode::BAD_REQUEST
+			Self::Request(_) => StatusCode::BAD_REQUEST,
 		}
 	}
 }
@@ -52,8 +58,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<postgres::Error> for Error {
-	fn from(e: postgres::Error) -> Self {
+impl From<chuchi_postgres::Error> for Error {
+	fn from(e: chuchi_postgres::Error) -> Self {
 		Self::Internal(e.to_string())
 	}
 }
@@ -68,7 +74,7 @@ impl From<users::Error> for Error {
 			InvalidAuthToken => Self::InvalidAuthToken,
 			InvalidDataToken => Self::InvalidDataToken,
 			InvalidUser => Self::InvalidUser,
-			Db(e) => Self::Internal(e.to_string())
+			Db(e) => Self::Internal(e.to_string()),
 		}
 	}
 }

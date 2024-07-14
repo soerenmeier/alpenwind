@@ -1,22 +1,21 @@
+use crate::api::{All, AllReq, DeleteReq, EditReq};
 use crate::data::Password;
-use crate::api::{AllReq, All, EditReq, DeleteReq};
-use crate::{db, Config, Passwords};
 use crate::error::Result;
+use crate::{db, Config, Passwords};
 
 use core_lib::users::Users;
 
-use fire::{api, FireBuilder};
-use fire::header::RequestHeader;
+use chuchi::header::RequestHeader;
+use chuchi::{api, Chuchi};
 
-use postgres::UniqueId;
-use postgres::time::DateTime;
-
+use chuchi_postgres::time::DateTime;
+use chuchi_postgres::UniqueId;
 
 #[api(AllReq)]
 pub async fn all(
 	header: &RequestHeader,
 	users: &Users,
-	passwords: &Passwords
+	passwords: &Passwords,
 ) -> Result<All> {
 	let (_, user) = users.sess_user_from_req(header).await?;
 
@@ -30,7 +29,7 @@ pub async fn edit(
 	req: EditReq,
 	header: &RequestHeader,
 	users: &Users,
-	passwords: &Passwords
+	passwords: &Passwords,
 ) -> Result<Password> {
 	let (_, user) = users.sess_user_from_req(header).await?;
 
@@ -43,7 +42,7 @@ pub async fn edit(
 		domain: req.domain,
 		username: req.username,
 		password: req.password,
-		created_on: DateTime::now()
+		created_on: DateTime::now(),
 	};
 
 	if create_new {
@@ -60,16 +59,17 @@ pub async fn delete(
 	req: DeleteReq,
 	header: &RequestHeader,
 	users: &Users,
-	passwords: &Passwords
+	passwords: &Passwords,
 ) -> Result<()> {
 	let (_, user) = users.sess_user_from_req(header).await?;
 
-	passwords.delete(&req.id, &user.id).await
+	passwords
+		.delete(&req.id, &user.id)
+		.await
 		.map_err(Into::into)
 }
 
-
-pub(crate) fn add_routes(server: &mut FireBuilder, _cfg: &Config) {
+pub(crate) fn add_routes(server: &mut Chuchi, _cfg: &Config) {
 	server.add_route(all);
 	server.add_route(edit);
 	server.add_route(delete);

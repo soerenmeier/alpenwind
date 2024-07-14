@@ -2,9 +2,9 @@
 	import { createEventDispatcher } from 'svelte';
 	import { cubicInOut } from 'svelte/easing';
 	import * as core from 'core-lib';
-	import CloseBtn from 'core-lib-ui/close-btn';
-	import BlueFormBtn from 'core-lib-ui/blue-form-btn';
-	import Field from 'core-lib-ui/form-input';
+	import CloseBtn from 'core-lib-ui/CloseBtn';
+	import FormBtn from 'core-lib-ui/FormBtn';
+	import Field from 'core-lib-ui/FormInput';
 
 	/* consts */
 	const dispatch = createEventDispatcher();
@@ -14,7 +14,7 @@
 			delay: params.delay ?? 0,
 			duration: params.duration ?? 400,
 			easing: params.easing ?? cubicInOut,
-			css: (t, u) => `background-color: rgba(0,0,0,${t * 0.4})`
+			css: (t, u) => `background-color: rgba(0,0,0,${t * 0.4})`,
 		};
 	}
 
@@ -23,7 +23,7 @@
 			delay: params.delay ?? 0,
 			duration: params.duration ?? 400,
 			easing: params.easing ?? cubicInOut,
-			css: (t, u) => `transform: translateX(${(1 - t) * 100}%)`
+			css: (t, u) => `transform: translateX(${(1 - t) * 100}%)`,
 		};
 	}
 
@@ -34,8 +34,7 @@
 	/// Event handlers
 	let ovCont;
 	function onOverlayClick(e) {
-		if (e.target !== ovCont)
-			return;
+		if (e.target !== ovCont) return;
 
 		dispatch('close');
 	}
@@ -67,41 +66,41 @@
 		{/if}
 
 		<form class="fields" on:submit={onSubmit}>
-				<Field
-					name="site"
-					label="Site"
-					placeholder="Site igäh"
-					bind:value={password.site}
-					required
-				/>
-				<Field
-					name="domain"
-					label="Site link"
-					placeholder="Site link igäh"
-					bind:value={password.domain}
-					required
-				/>
-				<Field
-					name="username"
-					label="Benutzername"
-					placeholder="Benutzername igäh"
-					bind:value={password.username}
-					required
-				/>
-				<Field
-					type="password"
-					name="password"
-					label="Passwort"
-					placeholder="Passwort igäh"
-					bind:value={password.password}
-					required
-				/>
+			<Field
+				name="site"
+				label="Site"
+				placeholder="Site igäh"
+				bind:value={password.site}
+				required
+			/>
+			<Field
+				name="domain"
+				label="Site link"
+				placeholder="Site link igäh"
+				bind:value={password.domain}
+				required
+			/>
+			<Field
+				name="username"
+				label="Benutzername"
+				placeholder="Benutzername igäh"
+				bind:value={password.username}
+				required
+			/>
+			<Field
+				type="password"
+				name="password"
+				label="Passwort"
+				placeholder="Passwort igäh"
+				bind:value={password.password}
+				required
+			/>
 
-				{#if password.id}
-					<BlueFormBtn text="Passwort spichere" />
-				{:else}
-					<BlueFormBtn text="Neus Passwort hinzuefüege" />
-				{/if}
+			{#if password.id}
+				<FormBtn text="Passwort spichere" />
+			{:else}
+				<FormBtn text="Neus Passwort hinzuefüege" />
+			{/if}
 		</form>
 	</div>
 </div>
@@ -109,7 +108,7 @@
 <style>
 	.add-overlay {
 		position: fixed;
-		background-color: rgba(0, 0, 0, .4);
+		background-color: rgba(0, 0, 0, 0.4);
 		z-index: 30;
 		overflow: hidden;
 	}

@@ -1,12 +1,11 @@
 use crate::data::Password;
 use crate::error::Error;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use postgres::UniqueId;
+use chuchi_postgres::UniqueId;
 
-use fire_api::{Request, Method};
-
+use chuchi::api::{Method, Request};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -15,7 +14,7 @@ pub struct AllReq;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct All {
-	pub list: Vec<Password>
+	pub list: Vec<Password>,
 }
 
 impl Request for AllReq {
@@ -34,7 +33,7 @@ pub struct EditReq {
 	pub site: String,
 	pub domain: String,
 	pub username: String,
-	pub password: String
+	pub password: String,
 }
 
 impl Request for EditReq {
@@ -49,7 +48,7 @@ impl Request for EditReq {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteReq {
-	pub id: UniqueId
+	pub id: UniqueId,
 }
 
 impl Request for DeleteReq {

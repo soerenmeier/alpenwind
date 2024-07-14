@@ -1,7 +1,6 @@
 <script>
 	import { onMount, createEventDispatcher } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import CloseBtn from 'core-lib-ui/close-btn';
 
 	/* consts */
 	const dispatch = createEventDispatcher();
@@ -13,8 +12,7 @@
 	/// Event handlers
 	let ovCont;
 	function onOverlayClick(e) {
-		if (e.target !== ovCont)
-			return;
+		if (e.target !== ovCont) return;
 
 		dispatch('close', null);
 	}
@@ -31,20 +29,20 @@
 
 <div
 	class="masterpw-overlay abs-full"
-	transition:fade={{duration: 200}}
+	transition:fade={{ duration: 200 }}
 	bind:this={ovCont}
 	on:click={onOverlayClick}
 >
 	<form class="fields" on:submit={onSubmit}>
-			<input
-				bind:this={field}
-				type="password"
-				name="masterpw"
-				placeholder="Master Passwort igäh"
-				required
-				bind:value={password}
-			>
-			<button>Los</button>
+		<input
+			bind:this={field}
+			type="password"
+			name="masterpw"
+			placeholder="Master Passwort igäh"
+			required
+			bind:value={password}
+		/>
+		<button>Los</button>
 	</form>
 </div>
 
@@ -52,7 +50,7 @@
 	.masterpw-overlay {
 		position: fixed;
 		display: flex;
-		background-color: rgba(0, 0, 0, .6);
+		background-color: rgba(0, 0, 0, 0.6);
 		z-index: 40;
 		align-items: center;
 		justify-content: center;
@@ -76,7 +74,7 @@
 		padding: 8px 18px;
 		color: var(--white);
 		cursor: pointer;
-		transition: background-color .2s ease;
+		transition: background-color 0.2s ease;
 		border-top-right-radius: 6px;
 		border-bottom-right-radius: 6px;
 	}

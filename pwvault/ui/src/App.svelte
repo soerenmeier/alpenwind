@@ -1,22 +1,22 @@
 <script>
-	import { getContext } from 'svelte';
-	import BackBtn from 'core-lib-ui/back-btn';
-	import AddBtn from 'core-lib-ui/add-btn';
-	import Search from 'core-lib-ui/search';
+	import BackBtn from 'core-lib-ui/BackBtn';
+	import AddBtn from 'core-lib-ui/AddBtn';
+	import Search from 'core-lib-ui/Search';
 	import PasswordComp from './ui/password.svelte';
 	import AddOverlay from './ui/addoverlay.svelte';
 	import MasterPwOverlay from './ui/masterpwoverlay.svelte';
-	import { all, EditPassword, edit, delete_ } from './lib/api.js';
-	import Listeners from 'fire/util/listeners.js';
-	import { sortToHigher } from 'fire/util.js';
+	import { all, EditPassword, edit, delete_ } from './lib/api.ts';
+	import Listeners from 'chuchi-utils/sync/Listeners';
+	import { sortToHigher } from 'chuchi-utils';
 	import { encrypt, decrypt } from './lib/crypto.js';
+	import { getCore } from 'core-lib';
 
-	const cl = getContext('cl');
+	const cl = getCore();
 	const { session } = cl;
 
 	window.dbgPwImport = async (p, masterPw) => {
 		p.password = await encrypt(masterPw, p.password);
-		
+
 		await edit(p, session.getValid().token);
 	};
 
@@ -30,25 +30,24 @@
 	load();
 
 	let showAddOverlay = false;
-	let editPassword = new EditPassword;
+	let editPassword = new EditPassword();
 
 	let showMasterPwOverlay = false;
-	let masterPwListeners = new Listeners;
+	let masterPwListeners = new Listeners();
 
 	/* functions */
 	function sortPasswords() {
-		passwords = passwords.sort((a, b) => sortToHigher(
-			a.site.toLowerCase(),
-			b.site.toLowerCase()
-		));
+		passwords = passwords.sort((a, b) =>
+			sortToHigher(a.site.toLowerCase(), b.site.toLowerCase()),
+		);
 	}
 
 	function filterPasswords(passwords, search) {
-		if (!search)
-			return passwords;
+		if (!search) return passwords;
 
 		// get the scores
-		return passwords.map(p => [p.match(search), p])
+		return passwords
+			.map(p => [p.match(search), p])
 			.filter(([score, p]) => score !== 0)
 			.sort(([aScore, ap], [bScore, bp]) => sortToHigher(aScore, bScore))
 			.map(([score, p]) => p);
@@ -77,20 +76,18 @@
 
 		// if we edit a password that already exists
 		// let's reset it
-		if (editPassword.id)
-			editPassword = new EditPassword;
+		if (editPassword.id) editPassword = new EditPassword();
 	}
 
 	async function onAddSubmit(e) {
 		showAddOverlay = false;
 
 		const p = editPassword;
-		editPassword = new EditPassword;
+		editPassword = new EditPassword();
 
 		// encrypt the values
 		const pw = await requestMasterPw();
-		if (!pw)
-			return;
+		if (!pw) return;
 
 		p.password = await encrypt(pw, p.password);
 
@@ -99,10 +96,8 @@
 
 			// check if the password already exists
 			const idx = passwords.findIndex(p => p.id === password.id);
-			if (idx > -1)
-				passwords[idx] = password;
-			else
-				passwords.push(password);
+			if (idx > -1) passwords[idx] = password;
+			else passwords.push(password);
 
 			sortPasswords();
 		} catch (e) {
@@ -114,8 +109,7 @@
 	async function onPasswordClick(pw) {
 		try {
 			const masterPw = await requestMasterPw();
-			if (masterPw === null)
-				return;
+			if (masterPw === null) return;
 
 			const realPw = await decrypt(masterPw, pw.password);
 			prompt(pw.site + ': ' + pw.username, realPw);
@@ -128,10 +122,11 @@
 	async function onContextMenu(e, pw) {
 		e.preventDefault();
 
-		cl.contextMenu.open(e,
+		cl.contextMenu.open(
+			e,
 			[
 				{ id: 'edit', text: 'Bearbeite' },
-				{ id: 'delete', text: 'Lösche' }
+				{ id: 'delete', text: 'Lösche' },
 			],
 			async id => {
 				if (id === 'edit') {
@@ -139,12 +134,11 @@
 					const masterPw = await requestMasterPw();
 					editPassword.password = await decrypt(
 						masterPw,
-						editPassword.password
+						editPassword.password,
 					);
 					showAddOverlay = true;
 				} else if (id === 'delete') {
-					if (!confirm('Passwort würklech lösche?'))
-						return;
+					if (!confirm('Passwort würklech lösche?')) return;
 
 					try {
 						await delete_(pw.id, session.getValid().token);
@@ -156,7 +150,7 @@
 						alert('Cha ne ds passwort lösche');
 					}
 				}
-			}
+			},
 		);
 	}
 </script>

@@ -1,8 +1,7 @@
-use postgres::time::DateTime;
-use postgres::UniqueId;
+use chuchi_postgres::time::DateTime;
+use chuchi_postgres::UniqueId;
 
-use serde::{Serialize, Deserialize};
-
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -13,5 +12,5 @@ pub struct Password {
 	pub username: String,
 	/// needs to be encrypted from the user site
 	pub password: String,
-	pub created_on: DateTime
+	pub created_on: DateTime,
 }

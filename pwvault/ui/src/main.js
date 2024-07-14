@@ -1,15 +1,15 @@
-import Vault from './app.svelte';
+import Vault from './App.svelte';
 import * as core from 'core-lib';
-const { StaticRoute, SvelteComponent } = core.router;
+const { SvelteComponent } = core.router;
 
 function addRoutes(router) {
-	router.addRoute(new StaticRoute('/pwvault', new SvelteComponent(Vault)));
+	router.register('/pwvault', () => new SvelteComponent(Vault));
 }
 
 export function init(cl) {
 	addRoutes(cl.router);
 
 	return {
-		name: 'Passwörter'
+		name: 'Passwörter',
 	};
 }
