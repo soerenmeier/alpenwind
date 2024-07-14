@@ -21,8 +21,8 @@ fn main() {
 	write!(
 		s,
 		"\
-		use fire::FireBuilder;\n\
-		use fire::fs::MemoryFile;\n\n\
+		use chuchi::Chuchi;\n\
+		use chuchi::fs::MemoryFile;\n\n\
 	"
 	)
 	.unwrap();
@@ -62,7 +62,7 @@ fn main() {
 		i += 1;
 	}
 
-	write!(s, "\npub fn add_routes(fire: &mut FireBuilder) {{\n").unwrap();
+	write!(s, "\npub fn add_routes(fire: &mut Chuchi) {{\n").unwrap();
 	for i in 0..i {
 		write!(s, "\tfire.add_route(ASSET_{i});\n").unwrap();
 	}

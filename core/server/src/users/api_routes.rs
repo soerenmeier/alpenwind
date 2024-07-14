@@ -7,13 +7,13 @@ use crate::api::{Error, Result};
 
 use std::time::Duration;
 
-use fire::header::RequestHeader;
-use fire::FireBuilder;
+use chuchi::header::RequestHeader;
+use chuchi::Chuchi;
 
-use fire_api::api;
+use chuchi::api;
 
+use chuchi::api::response::ResponseSettings;
 use core_lib::users::{get_token, get_token_from_cookie};
-use fire_api::response::ResponseSettings;
 
 // 1/2 year
 const TIMEOUT_DURATION: Duration = Duration::from_secs(365 * 24 * 60 * 60 * 60);
@@ -142,7 +142,7 @@ async fn save(
 	Ok(user)
 }
 
-pub fn add_routes(server: &mut FireBuilder) {
+pub fn add_routes(server: &mut Chuchi) {
 	server.add_route(login);
 	server.add_route(login_by_token);
 	server.add_route(renew);

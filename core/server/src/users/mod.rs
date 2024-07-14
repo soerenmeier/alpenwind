@@ -4,7 +4,7 @@ pub mod db;
 
 pub use core_lib::users::{Rights, Session, Timeout, Token, User};
 
-use fire::resources::Resources;
+use chuchi::resources::Resources;
 use tokio::task::JoinHandle;
 use tokio::time::{self, Duration};
 

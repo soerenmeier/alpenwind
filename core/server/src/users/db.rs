@@ -7,11 +7,11 @@ use bcrypt::{hash, verify};
 use core_lib::ffi;
 use core_lib::users::db::UnsafeUser;
 
-use fire::Resource;
-use postgres::json::Json;
-use postgres::table::TableOwned;
-use postgres::{filter, row, try2, whr, Error};
-use postgres::{Database, Result, UniqueId};
+use chuchi::Resource;
+use chuchi_postgres::json::Json;
+use chuchi_postgres::table::TableOwned;
+use chuchi_postgres::{filter, row, try2, whr, Error};
+use chuchi_postgres::{Database, Result, UniqueId};
 
 #[derive(Debug, Clone, Resource)]
 pub struct Users {

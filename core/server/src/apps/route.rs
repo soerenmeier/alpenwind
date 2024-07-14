@@ -3,11 +3,11 @@ use super::Apps;
 use std::mem;
 use std::net::SocketAddr;
 
-use fire::header::{ContentType, HeaderValues, ResponseHeader, StatusCode};
-use fire::resources::Resources;
-use fire::routes::{HyperRequest, PathParams, RawRoute, RoutePath};
-use fire::util::PinnedFuture;
-use fire::{Error, Response};
+use chuchi::header::{ContentType, HeaderValues, ResponseHeader, StatusCode};
+use chuchi::resources::Resources;
+use chuchi::routes::{HyperRequest, PathParams, RawRoute, RoutePath};
+use chuchi::util::PinnedFuture;
+use chuchi::{Error, Response};
 
 use hyper_util::rt::TokioIo;
 use tracing::error;
@@ -30,7 +30,7 @@ impl RawRoute for AppsRoute {
 		_address: SocketAddr,
 		_params: &'a PathParams,
 		resources: &'a Resources,
-	) -> PinnedFuture<'a, Option<fire::Result<Response>>> {
+	) -> PinnedFuture<'a, Option<chuchi::Result<Response>>> {
 		let path = req.uri().path();
 
 		// make sure we wan't to redirect the request

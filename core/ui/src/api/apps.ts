@@ -1,6 +1,5 @@
-import Api from 'fire/api/Api';
+import { Api } from 'chuchi/api';
 
-// @ts-ignore
 const api = new Api(import.meta.env.SERVER_ADDR + 'api/apps/');
 
 export class App {

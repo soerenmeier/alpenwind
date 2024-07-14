@@ -1,8 +1,7 @@
-import Api from 'fire/api/Api';
+import { Api } from 'chuchi/api';
 import { user as userMod } from 'core-lib';
 const { User, Session } = userMod;
 
-// @ts-ignore
 const api = new Api(import.meta.env.SERVER_ADDR + 'api/users/');
 
 export class Login {
@@ -17,14 +16,14 @@ export class Login {
 
 export async function login(
 	username: string,
-	password: string
+	password: string,
 ): Promise<Login> {
 	username = username.toLowerCase();
 	const d = await api.request(
 		'POST',
 		'login',
 		{ username, password },
-		{ credentials: 'include' }
+		{ credentials: 'include' },
 	);
 
 	return new Login(d);
@@ -36,7 +35,7 @@ export async function loginByToken(token: string) {
 		'loginbytoken',
 		null,
 		{ 'auth-token': token },
-		{ credentials: 'include' }
+		{ credentials: 'include' },
 	);
 
 	return new Login(d);
@@ -48,7 +47,7 @@ export async function renew(token: string) {
 		'renew',
 		null,
 		{ 'auth-token': token },
-		{ credentials: 'include' }
+		{ credentials: 'include' },
 	);
 
 	return new Login(d);
@@ -60,21 +59,21 @@ export async function logout(token: string) {
 		'logout',
 		null,
 		{ 'auth-token': token },
-		{ credentials: 'include' }
+		{ credentials: 'include' },
 	);
 }
 
 export async function save(
 	name: string,
 	password: string | null,
-	token: string
+	token: string,
 ) {
 	if (!password) password = null;
 	const d = await api.request(
 		'POST',
 		'save',
 		{ name, password },
-		{ 'auth-token': token }
+		{ 'auth-token': token },
 	);
 
 	return new User(d);

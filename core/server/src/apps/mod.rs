@@ -4,9 +4,9 @@ mod app_lib;
 pub mod route;
 
 use app_lib::{AppLib, Terminator};
-use fire::resources::Resources;
-use fire::routes::HyperRequest;
-use fire::Resource;
+use chuchi::resources::Resources;
+use chuchi::routes::HyperRequest;
+use chuchi::Resource;
 
 use crate::Users;
 

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { onDestroy, getContext } from 'svelte';
-	import DateTime from 'fire/time/DateTime';
+	import { onDestroy } from 'svelte';
 	import { apps } from '../lib/apps';
 	import { getCore } from 'core-lib';
+	import DateTime from 'chuchi-legacy/time/DateTime';
 
 	const cl = getCore();
 	const { user } = cl;

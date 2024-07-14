@@ -73,7 +73,7 @@ async fn main() {
 
 	// open database
 	let db_cfg = &cfg.database;
-	let db = postgres::Database::with_host(
+	let db = chuchi_postgres::Database::with_host(
 		&db_cfg.host,
 		&db_cfg.name,
 		&db_cfg.user,
@@ -105,11 +105,11 @@ async fn main() {
 		None => {}
 	}
 
-	let mut server = fire::build(&cfg.listen_on).await.unwrap();
+	let mut server = chuchi::build(&cfg.listen_on).await.unwrap();
 
-	server.add_data(users);
-	server.add_data(apps::Apps::new());
-	server.add_data(cfg_string);
+	server.add_resource(users);
+	server.add_resource(apps::Apps::new());
+	server.add_resource(cfg_string);
 	assets::add_routes(&mut server);
 	users::api_routes::add_routes(&mut server);
 	server.add_raw_route(apps::route::AppsRoute);
@@ -120,13 +120,13 @@ async fn main() {
 		cors::add_routes(&mut server);
 	}
 
-	let data = server.data().clone();
+	let data = server.resources().clone();
 
 	tokio::try_join!(
 		users::bg_task(data.clone()),
 		apps::bg_task(&cfg.apps, data.clone()),
 		tokio::spawn(async move {
-			server.ignite().await.unwrap();
+			server.run().await.unwrap();
 		})
 	)
 	.unwrap();

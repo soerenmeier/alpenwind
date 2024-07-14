@@ -1,6 +1,5 @@
 import { Core } from 'core-lib';
 
-// @ts-ignore
 const addr = import.meta.env.SERVER_ADDR;
 
 export default class App {

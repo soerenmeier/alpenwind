@@ -1,7 +1,6 @@
 import App from '../lib/App.js';
 import Page from './Page.svelte';
 import * as core from 'core-lib';
-// @ts-ignore
 import settingsIcon from '../../assets/settings/icon.png?url';
 const { SvelteComponent } = core.router;
 

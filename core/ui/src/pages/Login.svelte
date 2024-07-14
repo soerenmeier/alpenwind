@@ -1,5 +1,4 @@
 <script>
-	import { getContext } from 'svelte';
 	import { login } from '../api/users';
 	import { getCore } from 'core-lib';
 	import FormBtn from 'core-lib-ui/FormBtn';

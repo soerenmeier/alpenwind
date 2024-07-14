@@ -5,7 +5,6 @@ import App from './App.js';
 
 export let apps: App[] = [];
 
-// @ts-ignore
 const addr = import.meta.env.SERVER_ADDR;
 
 export class DynamicApp extends App {

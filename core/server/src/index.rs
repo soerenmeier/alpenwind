@@ -1,8 +1,8 @@
-use fire::fs::serve_memory_file;
-use fire::header::{Method, RequestHeader};
-use fire::routes::Route;
-use fire::util::PinnedFuture;
-use fire::{Data, Error, Request, Response, Result};
+use chuchi::fs::serve_memory_file;
+use chuchi::header::{Method, RequestHeader};
+use chuchi::routes::Route;
+use chuchi::util::PinnedFuture;
+use chuchi::{Data, Error, Request, Response, Result};
 
 const FILE: &[u8] = include_bytes!("../../ui/dist/index.html");
 

@@ -2,7 +2,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use fire_api::error::{self, ApiError, StatusCode};
+use chuchi::api::error::{self, ApiError, StatusCode};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Error {
@@ -52,8 +52,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<postgres::Error> for Error {
-	fn from(e: postgres::Error) -> Self {
+impl From<chuchi_postgres::Error> for Error {
+	fn from(e: chuchi_postgres::Error) -> Self {
 		Self::Internal(e.to_string())
 	}
 }

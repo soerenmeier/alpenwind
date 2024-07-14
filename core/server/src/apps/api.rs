@@ -2,7 +2,7 @@ use crate::api::Error;
 
 use serde::{Deserialize, Serialize};
 
-use fire_api::{Method, Request};
+use chuchi::api::{Method, Request};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
