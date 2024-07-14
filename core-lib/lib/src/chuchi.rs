@@ -1,4 +1,4 @@
-use fire::service::FireService;
+use chuchi::service::ChuchiService;
 
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use hyper_util::server::conn::auto::Builder;
@@ -10,18 +10,18 @@ pub type HyperRequest = hyper::Request<Incoming>;
 use crate::server::OnTerminate;
 use crate::stream::Listener;
 
-use fire::FireBuilder;
+use chuchi::Chuchi;
 
-pub async fn build() -> FireBuilder {
-	fire::build("127.0.0.1:0").await.unwrap()
+pub async fn build() -> Chuchi {
+	chuchi::build("127.0.0.1:0").await.unwrap()
 }
 
 pub async fn ignite(
-	builder: FireBuilder,
+	builder: Chuchi,
 	mut listener: Listener,
 	on_terminate: OnTerminate,
-) -> fire::Result<()> {
-	let pit = builder.into_pit();
+) -> chuchi::Result<()> {
+	let pit = builder.into_shared();
 
 	loop {
 		let Some(stream) = listener.accept().await else {
@@ -29,7 +29,8 @@ pub async fn ignite(
 		};
 
 		let io = TokioIo::new(stream);
-		let service = FireService::new(pit.clone(), ([127, 0, 0, 1], 0).into());
+		let service =
+			ChuchiService::new(pit.clone(), ([127, 0, 0, 1], 0).into());
 		let mut on_terminate = on_terminate.clone();
 
 		tokio::task::spawn(async move {
@@ -64,12 +65,7 @@ mod tests {
 	use std::{pin::Pin, time::Duration};
 
 	use bytes::Bytes;
-	use fire::{
-		body::BodyHttp,
-		post,
-		types::http::uri::{Authority, Scheme},
-		Body, Request, Response,
-	};
+	use chuchi::{body::BodyHttp, post, Body, Request, Response};
 	use futures::TryStreamExt;
 	use hyper::Uri;
 	use hyper_util::client::legacy::{Client, Error as ClientError};

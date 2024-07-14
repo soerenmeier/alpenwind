@@ -1,4 +1,4 @@
-import Writable from 'fire-svelte/stores/Writable';
+import { Writable } from 'chuchi/stores';
 
 export type ContextMenuEvent = { clientX: number; clientY: number };
 export type ContextMenuOpts = { id: string; text: string };

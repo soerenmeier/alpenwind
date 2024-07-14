@@ -1,7 +1,7 @@
 import * as routing from './routing';
 import * as user from './user';
-import Route from 'fire-svelte/routing/Route';
 import Core from './Core';
+import { Route } from 'chuchi';
 
 const router = {
 	Route,

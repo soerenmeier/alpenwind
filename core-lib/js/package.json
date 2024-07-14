@@ -17,8 +17,9 @@
 		"typescript": "^5.2.2"
 	},
 	"dependencies": {
-		"fire": "npm:fire-lib-js@^0.3.0",
-		"fire-svelte": "npm:fire-lib-js-svelte@^0.3.0-alpha.3"
+		"chuchi": "^0.1.0",
+		"chuchi-legacy": "^1.0.2",
+		"chuchi-utils": "^0.1.1"
 	},
 	"exports": {
 		".": {

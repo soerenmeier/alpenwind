@@ -1,7 +1,7 @@
 pub mod ffi;
 
+pub mod chuchi;
 pub mod client;
-pub mod fire;
 pub mod progress_channel;
 pub mod server;
 pub mod stream;

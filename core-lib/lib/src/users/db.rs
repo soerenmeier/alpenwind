@@ -1,9 +1,9 @@
 use super::{Rights, User};
 
-use postgres::json::Json;
-use postgres::table::TableOwned;
-use postgres::{filter, FromRow, ToRow};
-use postgres::{Database, Result, TableTempl, UniqueId};
+use chuchi_postgres::json::Json;
+use chuchi_postgres::table::TableOwned;
+use chuchi_postgres::{filter, FromRow, ToRow};
+use chuchi_postgres::{Database, Result, TableTempl, UniqueId};
 
 /// should only be used by core itself
 #[derive(Debug, TableTempl, ToRow, FromRow)]

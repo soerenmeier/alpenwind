@@ -1,6 +1,6 @@
 use crate::{ffi, util, Error, ErrorKind};
 
-use std::future::{self, ready, Future};
+use std::future::{self, ready};
 use std::io;
 use std::mem::MaybeUninit;
 use std::pin::Pin;

@@ -1,8 +1,8 @@
 pub use super::timeout::Timeout;
 use crate::ffi;
 
-use postgres::time::DateTime;
-use postgres::UniqueId;
+use chuchi_postgres::time::DateTime;
+use chuchi_postgres::UniqueId;
 
 use serde::{Deserialize, Serialize};
 

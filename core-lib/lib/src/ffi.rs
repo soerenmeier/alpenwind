@@ -11,8 +11,8 @@ use std::{mem, ptr, slice};
 
 use crypto::token::Token;
 
-use postgres::time::DateTime;
-use postgres::UniqueId;
+use chuchi_postgres::time::DateTime;
+use chuchi_postgres::UniqueId;
 
 #[repr(C)]
 pub struct c_str {

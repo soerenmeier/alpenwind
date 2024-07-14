@@ -1,7 +1,7 @@
-import Router from 'fire-svelte/routing/Router';
 import { SessionStore, User, newState } from './user';
-import Writable from 'fire-svelte/stores/Writable';
 import ContextMenu from './ContextMenu';
+import { Router } from 'chuchi';
+import { Writable } from 'chuchi/stores';
 
 export default class Core {
 	router: Router;

@@ -13,9 +13,9 @@ use crate::ffi;
 use std::fmt;
 use std::mem::MaybeUninit;
 
-use fire::{header::RequestHeader, Resource};
+use chuchi::{header::RequestHeader, Resource};
 
-use postgres::Database;
+use chuchi_postgres::Database;
 
 mod helpers {
 	use super::*;
@@ -43,7 +43,7 @@ pub enum Error {
 	InvalidAuthToken,
 	InvalidDataToken,
 	InvalidUser,
-	Db(postgres::Error),
+	Db(chuchi_postgres::Error),
 }
 
 impl fmt::Display for Error {

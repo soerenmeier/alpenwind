@@ -1,7 +1,7 @@
-import Writable from 'fire-svelte/stores/Writable';
-import ApiError from 'fire/api/ApiError';
-import Listeners from 'fire/sync/Listeners';
-import DateTime from 'fire/time/DateTime';
+import DateTime from 'chuchi-legacy/time/DateTime';
+import Listeners from 'chuchi-utils/sync/Listeners';
+import { ApiError } from 'chuchi/api';
+import { Writable } from 'chuchi/stores';
 
 export class User {
 	id!: string;
