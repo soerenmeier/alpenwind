@@ -4,7 +4,7 @@ import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import replace from '@rollup/plugin-replace';
 import esbuild from 'esbuild';
-import { randomToken } from 'fire/util.js';
+import { randomToken } from 'chuchi-utils';
 import sveltePreprocess from 'svelte-preprocess';
 
 // https://vitejs.dev/config/
@@ -14,15 +14,15 @@ export default defineConfig({
 			entry: resolve(__dirname, 'src/main.js'),
 			name: 'Cinema',
 			formats: ['es'],
-			fileName: 'main'
+			fileName: 'main',
 		},
 		rollupOptions: {
-			external: ['core-lib']
-		}
+			external: ['core-lib'],
+		},
 	},
 	plugins: [
 		svelte({
-			preprocess: sveltePreprocess()
+			preprocess: sveltePreprocess(),
 		}),
 		{
 			name: 'minify',
@@ -31,14 +31,14 @@ export default defineConfig({
 					entryPoints: ['./dist/main.js'],
 					minify: true,
 					allowOverwrite: true,
-					outfile: './dist/main.js'
+					outfile: './dist/main.js',
 				});
 
 				const rnd = randomToken(5).toLowerCase();
 
 				renameSync('./dist/main.js', './dist/main.' + rnd + '.js');
 				renameSync('./dist/style.css', './dist/style.' + rnd + '.css');
-			}
-		}
-	]
+			},
+		},
+	],
 });

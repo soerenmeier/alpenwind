@@ -12,16 +12,11 @@ use chuchi::{Error, Response};
 use hyper_util::rt::TokioIo;
 use tracing::error;
 
-const PREFIXES: &[&str] = &["/api/", "/assets/"];
-
-pub struct AppsRoute;
+struct AppsRoute;
 
 impl RawRoute for AppsRoute {
 	fn path(&self) -> RoutePath {
-		RoutePath {
-			method: None,
-			path: "/{*p}".into(),
-		}
+		panic!("don't call this route");
 	}
 
 	fn call<'a>(
@@ -32,11 +27,6 @@ impl RawRoute for AppsRoute {
 		resources: &'a Resources,
 	) -> PinnedFuture<'a, Option<chuchi::Result<Response>>> {
 		let path = req.uri().path();
-
-		// make sure we wan't to redirect the request
-		if !PREFIXES.iter().any(|prefix| path.starts_with(prefix)) {
-			return PinnedFuture::new(async { None });
-		}
 
 		let path = path.strip_prefix('/').unwrap_or(path);
 		let mut path = path.split('/');
@@ -110,5 +100,47 @@ impl RawRoute for AppsRoute {
 			.await;
 			Some(fut)
 		})
+	}
+}
+
+pub struct AppsApiRoute;
+
+impl RawRoute for AppsApiRoute {
+	fn path(&self) -> RoutePath {
+		RoutePath {
+			method: None,
+			path: "/api/{*rest}".into(),
+		}
+	}
+
+	fn call<'a>(
+		&'a self,
+		req: &'a mut HyperRequest,
+		_address: SocketAddr,
+		_params: &'a PathParams,
+		resources: &'a Resources,
+	) -> PinnedFuture<'a, Option<chuchi::Result<Response>>> {
+		AppsRoute::call(&AppsRoute, req, _address, _params, resources)
+	}
+}
+
+pub struct AppsAssetsRoute;
+
+impl RawRoute for AppsAssetsRoute {
+	fn path(&self) -> RoutePath {
+		RoutePath {
+			method: None,
+			path: "/assets/{*rest}".into(),
+		}
+	}
+
+	fn call<'a>(
+		&'a self,
+		req: &'a mut HyperRequest,
+		_address: SocketAddr,
+		_params: &'a PathParams,
+		resources: &'a Resources,
+	) -> PinnedFuture<'a, Option<chuchi::Result<Response>>> {
+		AppsRoute::call(&AppsRoute, req, _address, _params, resources)
 	}
 }

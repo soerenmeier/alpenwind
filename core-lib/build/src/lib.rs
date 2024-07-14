@@ -1,13 +1,13 @@
-use std::{io, fs};
-use std::path::{Path, PathBuf};
 use std::fmt::Write;
+use std::path::{Path, PathBuf};
+use std::{fs, io};
 
-pub const CORELIB_JS_PATH: &str = "/assets/core-lib/corelib.js?v=3";
+pub const CORELIB_JS_PATH: &str = "/assets/core-lib/corelib.js?v=4";
 
 #[derive(Debug, Clone)]
 pub struct File {
 	pub path: PathBuf,
-	pub uri: String
+	pub uri: String,
 }
 
 impl File {
@@ -16,7 +16,7 @@ impl File {
 		self.raw_to_memory_file(
 			name,
 			&format!("include_bytes!({:?})", self.path),
-			s
+			s,
 		);
 	}
 
@@ -24,9 +24,10 @@ impl File {
 		&self,
 		name: &str,
 		f: F,
-		s: &mut String
-	)
-	where F: FnOnce(&mut String) {
+		s: &mut String,
+	) where
+		F: FnOnce(&mut String),
+	{
 		let mut st = fs::read_to_string(&self.path).unwrap();
 		f(&mut st);
 		self.raw_to_memory_file(name, &format!("{st:?}.as_bytes()"), s);
@@ -43,7 +44,8 @@ impl File {
 			);\n",
 			self.uri,
 			self.path.file_name().and_then(|a| a.to_str()).unwrap()
-		).unwrap();
+		)
+		.unwrap();
 	}
 }
 
@@ -60,7 +62,7 @@ pub fn read_dir(dir: impl AsRef<Path>, uri: &str) -> io::Result<Vec<File>> {
 fn parse_dirs(
 	dir: impl AsRef<Path>,
 	uri: &str,
-	list: &mut Vec<File>
+	list: &mut Vec<File>,
 ) -> io::Result<()> {
 	for entry in fs::read_dir(dir.as_ref())? {
 		let entry = entry?;
@@ -68,15 +70,14 @@ fn parse_dirs(
 		let path = fs::canonicalize(entry.path()).unwrap();
 
 		if path.is_dir() {
-			parse_dirs(
-				path,
-				&format!("{uri}{entry_name}/"),
-				list
-			)?;
-			continue
+			parse_dirs(path, &format!("{uri}{entry_name}/"), list)?;
+			continue;
 		}
 
-		list.push(File { path, uri: format!("{uri}{entry_name}") });
+		list.push(File {
+			path,
+			uri: format!("{uri}{entry_name}"),
+		});
 	}
 
 	Ok(())

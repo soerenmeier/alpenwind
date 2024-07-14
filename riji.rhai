@@ -1,7 +1,7 @@
 let npmPackages = [
-	"core/ui",
 	"core-lib/js",
 	"core-lib/ui",
+	"core/ui",
 	"cinema/ui",
 	"pwvault/ui"
 ];
@@ -73,7 +73,7 @@ fn build_all() {
 	fs::delete("./dist");
 	fs::create_dir("./dist");
 
-	fs::copy("./core/server/target/release/core-server", "./dist");
+	fs::copy("./target/release/core-server", "./dist");
 
 	fs::create_dir("./dist/apps");
 
@@ -85,7 +85,7 @@ fn build_all() {
 		let app_dir = "./dist/apps/" + app;
 		fs::create_dir(app_dir);
 		fs::copy(
-			"./" + app + "/server/target/release/lib" + app + "_server.so",
+			"./target/release/lib" + app + "_server.so",
 			app_dir + "/" + app + ".so"
 		);
 	}
@@ -96,19 +96,28 @@ fn build(app) {
 	npm.dir("./" + app + "/ui");
 	npm.execute();
 
-	if app == "core" {
-		build_core_lib();
-	}
-
 	let cargo = cmd(["cargo", "build", "--release"]);
 	cargo.dir("./" + app + "/server");
 	cargo.execute();
 }
 
-fn build_core_lib() {
-	let npm = cmd(["npm", "run", "build"]);
-	npm.dir("./core-lib/js");
-	npm.execute();
+fn init_core_lib() {
+	let install_js = cmd(["npm", "ci"]);
+	install_js.dir("./core-lib/js");
+	install_js.execute();
+
+	let js = cmd(["npm", "run", "build"]);
+	js.dir("./core-lib/js");
+	js.execute();
+
+	// somehow this does not work on ci
+	let install_ui = cmd(["npm", "install"]);
+	install_ui.dir("./core-lib/ui");
+	install_ui.execute();
+
+	let ui = cmd(["npm", "run", "build"]);
+	ui.dir("./core-lib/ui");
+	ui.execute();
 }
 
 /// build everything to see if it works

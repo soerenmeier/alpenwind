@@ -1,28 +1,22 @@
 use chuchi::fs::serve_memory_file;
-use chuchi::header::{Method, RequestHeader};
-use chuchi::routes::Route;
-use chuchi::util::PinnedFuture;
-use chuchi::{Data, Error, Request, Response, Result};
+use chuchi::Chuchi;
+use chuchi::{get, Error, Request, Response, Result};
 
 const FILE: &[u8] = include_bytes!("../../ui/dist/index.html");
 
-pub struct Index;
+#[get("/")]
+fn index(req: &mut Request) -> Result<Response> {
+	serve_memory_file("index.html", FILE, req, None)
+		.map_err(Error::from_client_io)
+}
 
-impl Route for Index {
-	fn check(&self, req: &RequestHeader) -> bool {
-		req.method() == Method::GET
-	}
+#[get("/{*rest}")]
+fn index_rest(req: &mut Request) -> Result<Response> {
+	serve_memory_file("index.html", FILE, req, None)
+		.map_err(Error::from_client_io)
+}
 
-	fn validate_data(&self, _data: &Data) {}
-
-	fn call<'a>(
-		&'a self,
-		req: &'a mut Request,
-		_data: &'a Data,
-	) -> PinnedFuture<'a, Result<Response>> {
-		PinnedFuture::new(async move {
-			serve_memory_file("index.html", FILE, req, None)
-				.map_err(Error::from_client_io)
-		})
-	}
+pub fn add_routes(server: &mut Chuchi) {
+	server.add_route(index);
+	server.add_route(index_rest);
 }

@@ -7,8 +7,7 @@ import Apps from './pages/Apps.svelte';
 import { getContext } from 'svelte';
 
 function main() {
-	const context = new Map();
-	const cl = newCore({ context, getContext });
+	const cl = newCore({});
 
 	cl.router.register('/', async () => new SvelteComponent(Apps));
 
@@ -18,7 +17,6 @@ function main() {
 
 	const app = new App({
 		target: document.body,
-		context,
 	});
 }
 main();

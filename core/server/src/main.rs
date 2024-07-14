@@ -61,7 +61,7 @@ async fn main() {
 	unsafe { args.init() };
 
 	tracing_subscriber::fmt()
-		.with_env_filter("core=info,fire_http=info,error")
+		.with_env_filter("core-server=info,chuchi=info,error")
 		.init();
 
 	let cfg_string = fs::read_to_string(args.config)
@@ -112,10 +112,11 @@ async fn main() {
 	server.add_resource(cfg_string);
 	assets::add_routes(&mut server);
 	users::api_routes::add_routes(&mut server);
-	server.add_raw_route(apps::route::AppsRoute);
+	server.add_raw_route(apps::route::AppsApiRoute);
+	server.add_raw_route(apps::route::AppsAssetsRoute);
 	apps::api_routes::add_routes(&mut server);
 	#[cfg(not(debug_assertions))]
-	server.add_route(index::Index);
+	index::add_routes(&mut server);
 	if Args::enable_cors() {
 		cors::add_routes(&mut server);
 	}

@@ -13,19 +13,18 @@ export { router, user };
 
 export type { Core };
 
-export type CoreArgs = {
-	context: Map<any, any>;
-	getContext: (key: string) => any;
-};
+export type CoreArgs = {};
 
-export function newCore(args: CoreArgs): Core {
+export function newCore(args: CoreArgs = {}): Core {
 	const cl = new Core();
-	args.context.set('core-lib', cl);
-	globalThis.coreLibGetContext = args.getContext;
+
+	globalThis.CORE_LIB_01 = cl;
 
 	return cl;
 }
 
 export function getCore(): Core {
-	return globalThis.coreLibGetContext('core-lib');
+	// since we are cross npm project we might have different svelte versions, and so can't use getContext
+	// but since it is a singleton anyway i think this should be fine'
+	return globalThis.CORE_LIB_01;
 }
