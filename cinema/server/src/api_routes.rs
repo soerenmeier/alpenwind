@@ -1,31 +1,19 @@
 use crate::api::{Entries, EntriesReq, ProgressMsg, ProgressReq};
 use crate::data::{Entry, Progress};
 use crate::error::{Error, Result};
-use crate::fs::route::CinemaFsRoute;
-use crate::{CinemaDb, Config};
+use crate::CinemaDb;
 
-use core_lib::users::Users;
+use core_lib::users::{CheckedUser, Users};
 
 use chuchi::api::stream::{StreamError, StreamServer, Streamer};
-use chuchi::header::RequestHeader;
 use chuchi::{api, api_stream, Chuchi};
 
 use chuchi_postgres::time::DateTime;
-use tracing::info;
 
 #[api(EntriesReq)]
-pub async fn entries(
-	header: &RequestHeader,
-	users: &Users,
-	cinema: &CinemaDb,
-) -> Result<Entries> {
-	info!("entries req 1");
-	let (_, user) = users.sess_user_from_req(header).await?;
-
-	info!("entries req 2");
-
+pub async fn entries(cinema: &CinemaDb, sess: CheckedUser) -> Result<Entries> {
 	Ok(Entries {
-		list: cinema.all_by_user(&user.id).await?,
+		list: cinema.all_by_user(&sess.user.id).await?,
 	})
 }
 
@@ -107,9 +95,7 @@ pub async fn progress(
 pub(crate) fn add_routes(
 	server: &mut Chuchi,
 	stream_server: &mut StreamServer,
-	cfg: &Config,
 ) {
 	server.add_route(entries);
 	stream_server.insert(progress);
-	// server.add_route(CinemaFsRoute::new(&cfg.cinema));
 }

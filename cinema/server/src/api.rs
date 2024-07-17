@@ -12,7 +12,7 @@ use chuchi::api::{Method, Request};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct EntriesReq;
+pub struct EntriesReq {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -25,7 +25,7 @@ impl Request for EntriesReq {
 	type Error = Error;
 
 	const PATH: &'static str = "/api/cinema/entries";
-	const METHOD: Method = Method::POST;
+	const METHOD: Method = Method::GET;
 	const HEADERS: &'static [&'static str] = &["auth-token"];
 }
 

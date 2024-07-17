@@ -42,7 +42,7 @@ export class All {
 }
 
 export async function all(token: string) {
-	const d = await api.request('POST', 'passwords', null, {
+	const d = await api.request('GET', 'passwords', null, {
 		'auth-token': token,
 	});
 	return new All(d).list;
@@ -71,5 +71,5 @@ export async function edit(obj: EditPassword, token: string) {
 }
 
 export async function delete_(id: string, token: string) {
-	await api.request('POST', 'delete', { id }, { 'auth-token': token });
+	await api.request('DELETE', id + '/delete', null, { 'auth-token': token });
 }

@@ -36,7 +36,9 @@ struct PwVaultConf {
 
 init_fn!(init, "pwvault", assets::JS, assets::CSS);
 async fn init(core: Core) {
-	tracing_subscriber::fmt().with_env_filter("error").init();
+	tracing_subscriber::fmt()
+		.with_env_filter("pwvault_server=info,chuchi=info,warn")
+		.init();
 
 	let cfg: Config = core.parse_config().expect("failed to read config1");
 

@@ -28,7 +28,7 @@ impl Catcher for CorsHeaders {
 		// answer with access-control-allow-origin
 		if req.header().method == Method::OPTIONS {
 			res.header.status_code = StatusCode::NO_CONTENT;
-			values.insert(ACCESS_CONTROL_ALLOW_METHODS, "POST, PUT");
+			values.insert(ACCESS_CONTROL_ALLOW_METHODS, "POST, PUT, DELETE");
 		}
 
 		let host = req.header().value("origin").unwrap_or("*").to_string();

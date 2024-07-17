@@ -56,9 +56,7 @@ struct CinemaConf {
 init_fn!(init, "cinema", assets::JS, assets::CSS);
 async fn init(core: Core) {
 	tracing_subscriber::fmt()
-		.with_env_filter(
-			"cinema_server=info,fire_http=info,core_lib=debug,error",
-		)
+		.with_env_filter("cinema_server=info,chuchi=info,warn")
 		.init();
 
 	let cfg: Config = core.parse_config().expect("failed to read config");
@@ -85,7 +83,7 @@ async fn init(core: Core) {
 	server.add_resource(cfg.cinema.clone());
 
 	assets::add_routes(&mut server);
-	api_routes::add_routes(&mut server, &mut stream_server, &cfg);
+	api_routes::add_routes(&mut server, &mut stream_server);
 	fs::route::add_routes(&mut server);
 
 	server.add_raw_route(stream_server);

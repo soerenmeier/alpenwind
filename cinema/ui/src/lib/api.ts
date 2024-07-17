@@ -335,9 +335,10 @@ export class EntriesResp {
 	}
 }
 
+// returns all entries
 export async function entries(token: string): Promise<EntriesResp> {
 	const d = await api.request(
-		'POST',
+		'GET',
 		'entries',
 		null,
 		{ 'auth-token': token },

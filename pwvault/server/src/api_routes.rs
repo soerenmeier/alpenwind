@@ -3,7 +3,9 @@ use crate::data::Password;
 use crate::error::Result;
 use crate::{db, Config, Passwords};
 
-use core_lib::users::Users;
+use chuchi::extractor::PathParam;
+use chuchi::routes::PathParams;
+use core_lib::users::{CheckedUser, Users};
 
 use chuchi::header::RequestHeader;
 use chuchi::{api, Chuchi};
@@ -12,14 +14,8 @@ use chuchi_postgres::time::DateTime;
 use chuchi_postgres::UniqueId;
 
 #[api(AllReq)]
-pub async fn all(
-	header: &RequestHeader,
-	users: &Users,
-	passwords: &Passwords,
-) -> Result<All> {
-	let (_, user) = users.sess_user_from_req(header).await?;
-
-	let list = passwords.all_by_user(&user.id).await?;
+pub async fn all(sess: CheckedUser, passwords: &Passwords) -> Result<All> {
+	let list = passwords.all_by_user(&sess.user.id).await?;
 
 	Ok(All { list })
 }
@@ -27,17 +23,14 @@ pub async fn all(
 #[api(EditReq)]
 pub async fn edit(
 	req: EditReq,
-	header: &RequestHeader,
-	users: &Users,
+	sess: CheckedUser,
 	passwords: &Passwords,
 ) -> Result<Password> {
-	let (_, user) = users.sess_user_from_req(header).await?;
-
 	let create_new = req.id.is_none();
 
 	let password = db::Password {
 		id: req.id.unwrap_or_else(UniqueId::new),
-		user_id: user.id,
+		user_id: sess.user.id,
 		site: req.site,
 		domain: req.domain,
 		username: req.username,
@@ -56,15 +49,12 @@ pub async fn edit(
 
 #[api(DeleteReq)]
 pub async fn delete(
-	req: DeleteReq,
-	header: &RequestHeader,
-	users: &Users,
+	id: PathParam<UniqueId>,
+	sess: CheckedUser,
 	passwords: &Passwords,
 ) -> Result<()> {
-	let (_, user) = users.sess_user_from_req(header).await?;
-
 	passwords
-		.delete(&req.id, &user.id)
+		.delete(&id, &sess.user.id)
 		.await
 		.map_err(Into::into)
 }

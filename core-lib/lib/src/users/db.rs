@@ -31,6 +31,8 @@ impl From<UnsafeUser> for User {
 
 #[derive(Debug, Clone)]
 pub struct Users {
+	/// Todo replace this with a normal table
+	/// so we also don't need to implement TableTempl on UnsafeUser
 	table: TableOwned<UnsafeUser>,
 }
 

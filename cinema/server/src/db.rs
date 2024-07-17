@@ -1,7 +1,6 @@
 use super::data;
 
 use std::collections::HashMap;
-use std::fmt::Write;
 
 use chuchi::Resource;
 use chuchi_postgres::json::Json;
@@ -13,6 +12,7 @@ use chuchi_postgres::{Database, Result, TableTempl, UniqueId};
 
 use serde::{Deserialize, Serialize};
 
+/// Todo redo without TableTempl
 #[derive(Debug, TableTempl, FromRow, ToRow)]
 struct Entry {
 	#[index(primary)]
@@ -42,6 +42,7 @@ struct Episode {
 	updated_on: DateTime,
 }
 
+/// Todo redo without TableTempl
 #[derive(Debug, TableTempl, FromRow, ToRow)]
 struct EntryProgress {
 	#[index(primary)]
@@ -78,6 +79,7 @@ struct Progress {
 
 #[derive(Resource)]
 pub struct CinemaDb {
+	// todo redo with table
 	table: TableOwned<Entry>,
 	table_progress: TableOwned<EntryProgress>,
 }

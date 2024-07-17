@@ -1,6 +1,5 @@
 use super::Apps;
 
-use std::mem;
 use std::net::SocketAddr;
 
 use chuchi::header::{ContentType, HeaderValues, ResponseHeader, StatusCode};

@@ -1,13 +1,11 @@
 use std::fmt::Write;
 use std::{env, fs};
 
-use core_build_lib::{read_dir, CORELIB_JS_PATH};
+use core_build_lib::read_dir;
 
 fn main() {
 	println!("cargo:rerun-if-changed=../ui/assets");
 	println!("cargo:rerun-if-changed=../ui/dist");
-
-	let corelib_path = format!("\"{CORELIB_JS_PATH}\"");
 
 	let out_dir = env::var("OUT_DIR").unwrap();
 
@@ -33,6 +31,8 @@ fn main() {
 
 	#[cfg(not(debug_assertions))]
 	{
+		use core_build_lib::CORELIB_JS_PATH;
+		let corelib_path = format!("\"{CORELIB_JS_PATH}\"");
 		let mut js_name = None;
 		let mut css_name = None;
 

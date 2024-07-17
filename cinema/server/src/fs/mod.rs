@@ -48,6 +48,8 @@ pub(super) enum EntryChange {
 	Remove(UniqueId),
 }
 
+/// take a list of Entries from the database
+/// and calculate based on the filesystem what entries changeds
 pub(super) async fn changes_from_fs(
 	data_entries: &[data::Entry],
 	cfg: &CinemaConf,
@@ -85,6 +87,7 @@ pub(super) async fn changes_from_fs(
 	Ok(changes)
 }
 
+/// Converts a data::Entry into a more useful type for doing comparisonss
 fn convert_entries(
 	entries: &[data::Entry],
 ) -> HashMap<EntryId, (UniqueId, Entry)> {
@@ -136,6 +139,7 @@ fn convert_entries(
 }
 
 impl Entry {
+	/// converts an entry back to a data::Entry to store it in the database
 	fn into_data(self, updated_on: UpdatedOnData, id: UniqueId) -> data::Entry {
 		match (self, updated_on) {
 			(

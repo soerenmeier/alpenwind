@@ -9,7 +9,7 @@ use chuchi::api::{Method, Request};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AllReq;
+pub struct AllReq {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -22,7 +22,7 @@ impl Request for AllReq {
 	type Error = Error;
 
 	const PATH: &'static str = "/api/pwvault/passwords";
-	const METHOD: Method = Method::POST;
+	const METHOD: Method = Method::GET;
 	const HEADERS: &'static [&'static str] = &["auth-token"];
 }
 
@@ -47,15 +47,13 @@ impl Request for EditReq {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DeleteReq {
-	pub id: UniqueId,
-}
+pub struct DeleteReq;
 
 impl Request for DeleteReq {
 	type Response = ();
 	type Error = Error;
 
-	const PATH: &'static str = "/api/pwvault/delete";
-	const METHOD: Method = Method::POST;
+	const PATH: &'static str = "/api/pwvault/{id}/delete";
+	const METHOD: Method = Method::DELETE;
 	const HEADERS: &'static [&'static str] = &["auth-token"];
 }

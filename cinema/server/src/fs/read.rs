@@ -1,3 +1,5 @@
+//! Read files from the filesystem
+
 use super::util::IndexedVec;
 use super::{Entry, EntryId, EntryKind, Season, UpdatedOnData};
 use crate::CinemaConf;
@@ -31,6 +33,10 @@ where
 	io::Error::new(io::ErrorKind::Other, s)
 }
 
+/// read movies from the filesystem
+///
+/// Expects the movies to be called `<name> <year>.mp4` and be in the movies folder
+/// Expects the posters to be called `<name> <year>.jpg` and be in the movie_posters folder
 async fn movies_from_fs(
 	cfg: &CinemaConf,
 	entries: &mut HashMap<EntryId, (Entry, UpdatedOnData)>,
@@ -94,6 +100,19 @@ fn entry_name(dir_entry: &DirEntry) -> String {
 	dir_entry.file_name().into_string().expect("non utf8 file")
 }
 
+/// read series from the filesystem
+///
+/// Expects the series to be in the series folder
+/// Uses the folder name as the series name
+/// Expects `poster.jpg` files in the series folders
+/// Expects `Season <number>` folders in the series folder
+/// Expects `Episode <number> <name>.mp4` files in the season folders
+///
+/// series:
+/// - Mr. Robot
+/// - - poster.jpg
+/// - - Season 1
+/// - - - Episode 1 eps1.0_hellofriend.mp4
 async fn series_from_fs(
 	cfg: &CinemaConf,
 	entries: &mut HashMap<EntryId, (Entry, UpdatedOnData)>,
