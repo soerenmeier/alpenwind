@@ -15,6 +15,7 @@ mod assets {
 	include!(concat!(env!("OUT_DIR"), "/assets_routes.rs"));
 }
 
+use chuchi_postgres::database::Config as DbConfig;
 use db::CinemaDb;
 
 use core_lib::config::DbConf;
@@ -63,11 +64,13 @@ async fn init(core: Core) {
 
 	// open database
 	let db_cfg = &cfg.database;
-	let db = chuchi_postgres::Database::with_host(
-		&db_cfg.host,
-		&db_cfg.name,
-		&db_cfg.user,
-		&db_cfg.password,
+	let db = chuchi_postgres::Database::with_cfg(
+		DbConfig::default()
+			.host(db_cfg.host.clone())
+			.dbname(db_cfg.name.clone())
+			.user(db_cfg.user.clone())
+			.password(db_cfg.password.clone())
+			.migration_table("cinema_migrations"),
 	)
 	.await
 	.unwrap();
@@ -78,6 +81,7 @@ async fn init(core: Core) {
 	let mut server = core_lib::chuchi::build().await;
 	let mut stream_server = StreamServer::new("/api/cinema/stream");
 
+	server.add_resource(db);
 	server.add_resource(users);
 	server.add_resource(cinema);
 	server.add_resource(cfg.cinema.clone());

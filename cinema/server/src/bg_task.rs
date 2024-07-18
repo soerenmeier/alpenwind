@@ -4,6 +4,7 @@ use crate::fs::{changes_from_fs, EntryChange};
 use crate::CinemaConf;
 
 use chuchi::resources::Resources;
+use chuchi_postgres::Database;
 use tokio::task::JoinHandle;
 use tokio::time::{self, Duration};
 
@@ -22,6 +23,7 @@ pub(crate) fn bg_task(
 	tokio::spawn(async move {
 		let mut intv = time::interval(REFRESH_EVERY);
 		let cinema: &CinemaDb = data.get().unwrap();
+		let db: &Database = data.get().unwrap();
 
 		let terminate = on_terminate.on_terminate();
 		tokio::pin!(terminate);
@@ -31,14 +33,20 @@ pub(crate) fn bg_task(
 				_ = &mut terminate => return
 			}
 
-			if let Err(e) = task_tick(cinema, &cfg).await {
+			if let Err(e) = task_tick(db, cinema, &cfg).await {
 				eprintln!("failed to update cinema {e:?}");
 			}
 		}
 	})
 }
 
-async fn task_tick(cinema: &CinemaDb, cfg: &CinemaConf) -> Result<()> {
+async fn task_tick(
+	db: &Database,
+	cinema: &CinemaDb,
+	cfg: &CinemaConf,
+) -> Result<()> {
+	let conn = db.get().await.map_err(|e| Error::Internal(e.to_string()))?;
+	let cinema = cinema.with_conn(conn.connection());
 	let entries = cinema.all().await?;
 
 	let changes = changes_from_fs(&entries, &cfg)

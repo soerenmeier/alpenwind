@@ -5,17 +5,18 @@ use std::collections::HashMap;
 use chuchi::Resource;
 use chuchi_postgres::json::Json;
 use chuchi_postgres::row::ToRow;
-use chuchi_postgres::table::TableOwned;
+use chuchi_postgres::table::table::TableWithConn;
+use chuchi_postgres::table::Table;
 use chuchi_postgres::time::DateTime;
-use chuchi_postgres::{filter, try2, whr, FromRow, ToRow};
-use chuchi_postgres::{Database, Result, TableTempl, UniqueId};
+use chuchi_postgres::{filter, try2, whr, Connection, FromRow, ToRow};
+use chuchi_postgres::{Database, Result, UniqueId};
 
+use core_lib::migration_files;
 use serde::{Deserialize, Serialize};
 
 /// Todo redo without TableTempl
-#[derive(Debug, TableTempl, FromRow, ToRow)]
+#[derive(Debug, FromRow, ToRow)]
 struct Entry {
-	#[index(primary)]
 	id: UniqueId,
 	name: String,
 	updated_on: DateTime,
@@ -42,12 +43,9 @@ struct Episode {
 	updated_on: DateTime,
 }
 
-/// Todo redo without TableTempl
-#[derive(Debug, TableTempl, FromRow, ToRow)]
+#[derive(Debug, FromRow, ToRow)]
 struct EntryProgress {
-	#[index(primary)]
 	entry_id: UniqueId,
-	#[index(primary)]
 	user_id: UniqueId,
 	updated_on: DateTime,
 	data: Json<EntryProgressData>,
@@ -77,23 +75,53 @@ struct Progress {
 	position: f32,
 }
 
+const MIGRATIONS: &[(&str, &str)] = migration_files!("cinema-create");
+
 #[derive(Resource)]
 pub struct CinemaDb {
-	// todo redo with table
-	table: TableOwned<Entry>,
-	table_progress: TableOwned<EntryProgress>,
+	table: Table,
+	table_progress: Table,
 }
 
 impl CinemaDb {
 	pub async fn new(db: &Database) -> Self {
-		Self {
-			table: db.table_owned("cinema").create().await,
-			table_progress: db.table_owned("cinema_progress").create().await,
+		let this = Self {
+			table: Table::new("cinema"),
+			table_progress: Table::new("cinema_progress"),
+		};
+
+		let migrations = db.migrations();
+		let mut conn = db.get().await.unwrap();
+
+		for (name, sql) in MIGRATIONS {
+			migrations
+				.add(&mut conn, name, sql)
+				.await
+				.expect("failed to run migration");
 		}
+
+		this
 	}
 
+	pub fn with_conn<'a>(
+		&'a self,
+		conn: Connection<'a>,
+	) -> CinemaDbWithConn<'a> {
+		CinemaDbWithConn {
+			table: self.table.with_conn(conn.clone()),
+			table_progress: self.table_progress.with_conn(conn),
+		}
+	}
+}
+
+pub struct CinemaDbWithConn<'a> {
+	table: TableWithConn<'a>,
+	table_progress: TableWithConn<'a>,
+}
+
+impl CinemaDbWithConn<'_> {
 	pub async fn all(&self) -> Result<Vec<data::Entry>> {
-		let entries = self.table.find_all().await?;
+		let entries = self.table.select::<Entry>(filter!()).await?;
 		Ok(entries
 			.into_iter()
 			.map(|e| e.into_data(None).unwrap())
@@ -104,8 +132,11 @@ impl CinemaDb {
 		&self,
 		user_id: &UniqueId,
 	) -> Result<Vec<data::Entry>> {
-		let entries = self.table.find_all().await?;
-		let progress = self.table_progress.find_many(filter!(user_id)).await?;
+		let entries = self.table.select::<Entry>(filter!()).await?;
+		let progress = self
+			.table_progress
+			.select::<EntryProgress>(filter!(user_id))
+			.await?;
 
 		let mut progress: HashMap<_, _> =
 			progress.into_iter().map(|p| (p.entry_id, p)).collect();
@@ -131,10 +162,10 @@ impl CinemaDb {
 		id: &UniqueId,
 		user_id: &UniqueId,
 	) -> Result<Option<data::Entry>> {
-		let entry = try2!(self.table.find_one(filter!(id)).await?);
+		let entry = try2!(self.table.select_opt::<Entry>(filter!(id)).await?);
 		let progress = self
 			.table_progress
-			.find_one(filter!("entry_id"=id AND user_id))
+			.select_opt::<EntryProgress>(filter!("entry_id"=id AND user_id))
 			.await?;
 
 		Ok(entry.into_data(progress))
@@ -147,8 +178,7 @@ impl CinemaDb {
 	) -> Result<()> {
 		let prog = EntryProgress::from_entry(entry, user_id);
 		let table = self.table_progress.name();
-		let conn = self.table_progress.get_connection().await?;
-		let conn = conn.connection();
+		let conn = self.table_progress.conn();
 
 		let mut sql = format!("INSERT INTO \"{table}\" (");
 		prog.insert_columns(&mut sql);
@@ -171,14 +201,14 @@ impl CinemaDb {
 	pub async fn insert_data(&self, entry: &data::Entry) -> Result<()> {
 		let e = Entry::from_data(entry);
 
-		self.table.insert_one(&e).await
+		self.table.insert(&e).await
 	}
 
 	pub async fn update_data(&self, entry: &data::Entry) -> Result<()> {
 		let e = Entry::from_data(entry);
 		let id = &e.id;
 
-		self.table.update_full(&e, whr!(id)).await
+		self.table.update(&e, whr!(id)).await
 	}
 
 	pub async fn delete_by_id(&self, id: &UniqueId) -> Result<()> {
@@ -186,35 +216,6 @@ impl CinemaDb {
 		self.table_progress.delete(whr!("entry_id" = id)).await
 	}
 }
-
-/*
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-enum EntryData {
-	Movie {
-		year: u32
-	},
-	Series {
-		seasons: Vec<Season>
-	}
-}
-
-impl_json_col_type!(EntryData);
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Season {
-	name: Option<String>,
-	episodes: Vec<Episode>
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Episode {
-	name: String,
-	updated_on: DateTime
-}
-*/
 
 impl Entry {
 	pub fn from_data(e: &data::Entry) -> Self {

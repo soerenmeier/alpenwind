@@ -3,15 +3,23 @@ use crate::data::{Entry, Progress};
 use crate::error::{Error, Result};
 use crate::CinemaDb;
 
+use chuchi_postgres::Database;
 use core_lib::users::{CheckedUser, Users};
 
 use chuchi::api::stream::{StreamError, StreamServer, Streamer};
-use chuchi::{api, api_stream, Chuchi};
+use chuchi::{api, api_stream, Chuchi, Res};
 
 use chuchi_postgres::time::DateTime;
+use core_lib::utils::db::ConnOwned;
 
 #[api(EntriesReq)]
-pub async fn entries(cinema: &CinemaDb, sess: CheckedUser) -> Result<Entries> {
+pub async fn entries(
+	conn: ConnOwned,
+	cinema: &CinemaDb,
+	sess: CheckedUser,
+) -> Result<Entries> {
+	let cinema = cinema.with_conn(conn.conn());
+
 	Ok(Entries {
 		list: cinema.all_by_user(&sess.user.id).await?,
 	})
@@ -21,12 +29,19 @@ pub async fn entries(cinema: &CinemaDb, sess: CheckedUser) -> Result<Entries> {
 pub async fn progress(
 	req: ProgressReq,
 	mut stream: Streamer<ProgressMsg>,
+	database: Res<'_, Database>,
 	cinema: &CinemaDb,
 	users: &Users,
 ) -> Result<()> {
 	let (_, user) = users.sess_user_from_token(&req.token).await?;
 
 	loop {
+		let conn = database
+			.get()
+			.await
+			.map_err(|e| Error::Internal(e.to_string()))?;
+		let cinema = cinema.with_conn(conn.connection());
+
 		let msg = match stream.recv().await {
 			Ok(m) => m,
 			Err(StreamError::Closed) => return Ok(()),

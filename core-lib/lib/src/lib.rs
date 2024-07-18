@@ -2,9 +2,11 @@ pub mod ffi;
 
 pub mod chuchi;
 pub mod client;
+pub mod macros;
 pub mod progress_channel;
 pub mod server;
 pub mod stream;
+pub mod utils;
 
 pub mod config;
 pub mod users;
