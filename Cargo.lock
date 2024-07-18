@@ -380,6 +380,7 @@ dependencies = [
  "image",
  "lazy_static",
  "regex",
+ "reqwest",
  "serde",
  "tokio",
  "tracing",

@@ -5,6 +5,7 @@ mod data;
 mod db;
 mod error;
 mod fs;
+mod tmdb;
 
 mod assets {
 	#[cfg(debug_assertions)]
@@ -51,6 +52,9 @@ struct CinemaConf {
 	//
 	#[serde(rename = "allow-deletes", default)]
 	allow_deletes: bool,
+	//
+	#[serde(rename = "tmdb-api-key")]
+	tmdb_api_key: String,
 }
 
 init_fn!(init, "cinema", assets::JS, assets::CSS);
