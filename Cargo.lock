@@ -318,13 +318,14 @@ dependencies = [
 
 [[package]]
 name = "chuchi-postgres"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3164b6fbd4d03b802cedb0dc60b115b1c944c32176dc0cf0f814e49bf12f029"
+checksum = "34d0fc3ac527e632bb3d4e9a39676f42737da928db9d02e53cf0526c2c61623a"
 dependencies = [
  "base64 0.22.1",
  "bytes",
  "chrono",
+ "chuchi",
  "chuchi-postgres-derive",
  "chuchi-postgres-types",
  "deadpool",

@@ -3,6 +3,7 @@ use crate::data::{Entry, Progress};
 use crate::error::{Error, Result};
 use crate::CinemaDb;
 
+use chuchi_postgres::connection::ConnectionOwned;
 use chuchi_postgres::Database;
 use core_lib::users::{CheckedUser, Users};
 
@@ -10,15 +11,14 @@ use chuchi::api::stream::{StreamError, StreamServer, Streamer};
 use chuchi::{api, api_stream, Chuchi, Res};
 
 use chuchi_postgres::time::DateTime;
-use core_lib::utils::db::ConnOwned;
 
 #[api(EntriesReq)]
 pub async fn entries(
-	conn: ConnOwned,
+	conn: ConnectionOwned,
 	cinema: &CinemaDb,
 	sess: CheckedUser,
 ) -> Result<Entries> {
-	let cinema = cinema.with_conn(conn.conn());
+	let cinema = cinema.with_conn(conn.connection());
 
 	Ok(Entries {
 		list: cinema.all_by_user(&sess.user.id).await?,
