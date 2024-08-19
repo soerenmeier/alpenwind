@@ -24,70 +24,67 @@ export function bgImg(url: string): string {
 	return `background-image: url("${assets(url)}")`;
 }
 
-export type EntryInner =
+export type EntryData =
 	| { kind: 'Movie'; data: Movie }
 	| { kind: 'Series'; data: Series };
 
 export class Entry {
-	inner: EntryInner;
+	id!: string;
+	name!: string;
+	originalName: string | null;
+	description: string | null;
+	rating: number | null;
+	data: EntryData;
+	updatedOn: DateTime;
+	genres!: string[];
 
 	constructor(d: any) {
-		switch (Object.keys(d)[0]) {
+		Object.assign(this, d);
+
+		switch (this.data.kind) {
 			case 'Movie':
-				this.inner = {
-					kind: 'Movie',
-					data: new Movie(d['Movie']),
-				};
-				return;
+				this.data = { kind: 'Movie', data: new Movie(this.data.data) };
+				break;
 			case 'Series':
-				this.inner = {
+				this.data = {
 					kind: 'Series',
-					data: new Series(d['Series']),
+					data: new Series(this.data.data),
 				};
-				return;
+				break;
 		}
-	}
 
-	get kind(): string {
-		return this.inner.kind;
-	}
-
-	get data(): Movie | Series {
-		return this.inner.data;
+		this.updatedOn = new DateTime(d.updatedOn);
 	}
 }
 
 export class Movie {
-	id: string;
-	name: string;
-	year?: number | null;
-	updatedOn: DateTime;
+	duration: number | null;
+	year: number;
 	progress: Progress | null;
 
 	constructor(d: any) {
 		Object.assign(this, d);
 
-		this.updatedOn = new DateTime(d.updatedOn);
 		this.progress = d.progress ? new Progress(d.progress) : null;
 	}
 
-	title(): string {
-		return this.name + ' ' + this.year;
-	}
+	// title(): string {
+	// 	return this.name + ' ' + this.year;
+	// }
 
-	poster(): string {
-		return assets(`posters/movies/${encodeURIComponent(this.title())}.jpg`);
-	}
+	// poster(): string {
+	// 	return assets(`posters/movies/${encodeURIComponent(this.title())}.jpg`);
+	// }
 
-	fullPoster(): string {
-		return assets(
-			`full-posters/movies/${encodeURIComponent(this.title())}.jpg`,
-		);
-	}
+	// fullPoster(): string {
+	// 	return assets(
+	// 		`full-posters/movies/${encodeURIComponent(this.title())}.jpg`,
+	// 	);
+	// }
 
-	src(): string {
-		return assets(`movies/${encodeURIComponent(this.title())}.mp4`);
-	}
+	// src(): string {
+	// 	return assets(`movies/${encodeURIComponent(this.title())}.mp4`);
+	// }
 
 	/// the total Len is required to calculate the automatic creditsDuration
 	/// totalLen in secs
@@ -97,9 +94,9 @@ export class Movie {
 		return 4 * 60;
 	}
 
-	getUpdatedOn(): DateTime {
-		return this.updatedOn;
-	}
+	// getUpdatedOn(): DateTime {
+	// 	return this.updatedOn;
+	// }
 
 	progressUpdatedOn(): DateTime | null {
 		return this.progress?.updatedOn ?? null;
@@ -121,16 +118,14 @@ export class Movie {
 		});
 	}
 
-	sendProgress(stream: ProgressStream) {
-		const percent = this.progress?.percent ?? 0;
-		const position = this.progress?.position ?? 0;
-		stream.sendMovie(this.id, percent, position);
-	}
+	// sendProgress(stream: ProgressStream) {
+	// 	const percent = this.progress?.percent ?? 0;
+	// 	const position = this.progress?.position ?? 0;
+	// 	stream.sendMovie(this.id, percent, position);
+	// }
 }
 
 export class Series {
-	id: string;
-	name: string;
 	seasons: Season[];
 
 	constructor(d: any) {
@@ -139,23 +134,23 @@ export class Series {
 		this.seasons = d.seasons.map((s: any) => new Season(s));
 	}
 
-	poster(): string {
-		return assets(`posters/series/${encodeURIComponent(this.name)}.jpg`);
-	}
+	// poster(): string {
+	// 	return assets(`posters/series/${encodeURIComponent(this.name)}.jpg`);
+	// }
 
-	fullPoster(): string {
-		return assets(
-			`full-posters/series/${encodeURIComponent(this.name)}.jpg`,
-		);
-	}
+	// fullPoster(): string {
+	// 	return assets(
+	// 		`full-posters/series/${encodeURIComponent(this.name)}.jpg`,
+	// 	);
+	// }
 
-	src(seasonIdx: number, episodeIdx: number): string {
-		const seas = this.seasons[seasonIdx];
-		const season = encodeURIComponent(seas.folderName(seasonIdx));
-		const ep = seas.episodes[episodeIdx];
-		const episode = encodeURIComponent(ep.fileName(episodeIdx));
-		return assets(`series/${this.name}/${season}/${episode}`);
-	}
+	// src(seasonIdx: number, episodeIdx: number): string {
+	// 	const seas = this.seasons[seasonIdx];
+	// 	const season = encodeURIComponent(seas.folderName(seasonIdx));
+	// 	const ep = seas.episodes[episodeIdx];
+	// 	const episode = encodeURIComponent(ep.fileName(episodeIdx));
+	// 	return assets(`series/${this.name}/${season}/${episode}`);
+	// }
 
 	/// the total Len is required to calculate the automatic creditsDuration
 	/// totalLen in secs
@@ -217,22 +212,21 @@ export class Series {
 		);
 	}
 
-	sendProgress(
-		stream: ProgressStream,
-		seasonIdx: number,
-		episodeIdx: number,
-	) {
-		const ep = this.seasons[seasonIdx].episodes[episodeIdx];
+	// sendProgress(
+	// 	stream: ProgressStream,
+	// 	seasonIdx: number,
+	// 	episodeIdx: number,
+	// ) {
+	// 	const ep = this.seasons[seasonIdx].episodes[episodeIdx];
 
-		const percent = ep.progress?.percent ?? 0;
-		const position = ep.progress?.position ?? 0;
-		stream.sendSeries(this.id, seasonIdx, episodeIdx, percent, position);
-	}
+	// 	const percent = ep.progress?.percent ?? 0;
+	// 	const position = ep.progress?.position ?? 0;
+	// 	stream.sendSeries(this.id, seasonIdx, episodeIdx, percent, position);
+	// }
 }
 
 export class Progress {
 	percent: number;
-	position: number;
 	updatedOn: DateTime;
 
 	constructor(d: any) {
@@ -247,7 +241,10 @@ export class Progress {
 }
 
 export class Season {
-	name?: string | null;
+	id!: string;
+	season: number;
+	name!: string | null;
+	originalName!: string | null;
 	episodes: Episode[];
 
 	constructor(d: any) {
@@ -256,13 +253,13 @@ export class Season {
 		this.episodes = d.episodes.map((e: any) => new Episode(e));
 	}
 
-	title(idx: number): string {
+	title(): string {
 		let name = this.name ? ' ' + this.name : '';
-		return 'Season ' + padZero(idx + 1) + name;
+		return 'Season ' + padZero(this.season) + name;
 	}
 
-	folderName(idx: number): string {
-		return this.title(idx);
+	folderName(): string {
+		return this.title();
 	}
 
 	totalPercent(): number {
@@ -272,7 +269,10 @@ export class Season {
 }
 
 export class Episode {
-	name: string;
+	id!: string;
+	episode!: number;
+	name!: string;
+	originalName!: string | null;
 	updatedOn: DateTime;
 	progress: Progress | null;
 
@@ -312,10 +312,6 @@ export class Episode {
 
 	percent(): number {
 		return this.progress?.percent ?? 0;
-	}
-
-	position(): number {
-		return this.progress?.position ?? 0;
 	}
 
 	setProgress(percent: number, position: number) {

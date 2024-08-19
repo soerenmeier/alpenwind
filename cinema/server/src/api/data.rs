@@ -6,6 +6,7 @@ use chuchi_postgres::UniqueId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Entry {
 	pub id: UniqueId,
 	pub name: String,
@@ -18,6 +19,7 @@ pub struct Entry {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind")]
 pub enum EntryData {
 	Movie(Movie),
 	Series(Series),
