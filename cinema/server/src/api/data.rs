@@ -26,7 +26,7 @@ pub enum EntryData {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Movie {
-	pub duration: u32,
+	pub duration: Option<u32>,
 	pub year: u16,
 	pub progress: Option<Progress>,
 }
@@ -136,7 +136,7 @@ impl From<data::Episode> for Episode {
 			episode: episode.episode,
 			name: episode.name,
 			original_name: episode.original_name,
-			updated_on: episode.updated_on,
+			updated_on: episode.created_on,
 			progress: episode.progress.map(|progress| progress.into()),
 		}
 	}

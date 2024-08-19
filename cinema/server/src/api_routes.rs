@@ -102,6 +102,8 @@ pub async fn progress(
 		prog.updated_on = DateTime::now();
 
 		cinema.update_progress(prog).await?;
+
+		trans.commit().await?;
 	}
 }
 

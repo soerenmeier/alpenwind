@@ -84,7 +84,7 @@ async fn movies_from_fs(
 				name: name.to_string(),
 				year,
 				created_on: created,
-				duration: 0,
+				duration: None,
 				poster: poster_exists.then_some(poster_name),
 				background: None,
 			},

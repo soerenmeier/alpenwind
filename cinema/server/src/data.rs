@@ -30,9 +30,11 @@ pub struct Entry {
 	pub background: Option<String>,
 	pub rating: Option<f32>,
 	pub data: EntryData,
+	pub created_on: DateTime,
 	pub updated_on: DateTime,
 	pub genres: Vec<UniqueId>,
 	// data change should not be tracked here
+	// a season change should not affect this change
 	pub change: Change,
 }
 
@@ -44,9 +46,8 @@ pub enum EntryData {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Movie {
-	pub duration: u32,
+	pub duration: Option<u32>,
 	pub year: u16,
-	pub change: Change,
 	pub progress: Option<Progress>,
 }
 
@@ -60,8 +61,6 @@ pub struct Progress {
 pub struct Series {
 	// are ordered but might have gaps
 	pub seasons: Vec<Season>,
-	// a season change should not affect this change
-	pub change: Change,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -75,6 +74,7 @@ pub struct Season {
 	pub episodes: Vec<Episode>,
 	// a episode change should not affect this change
 	pub change: Change,
+	pub created_on: DateTime,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -84,7 +84,10 @@ pub struct Episode {
 	pub episode: u16,
 	pub name: String,
 	pub original_name: Option<String>,
-	pub updated_on: DateTime,
+	pub year: Option<u16>,
+	pub created_on: DateTime,
+	pub description: Option<String>,
+	pub duration: Option<u32>,
 	pub change: Change,
 	pub progress: Option<Progress>,
 }

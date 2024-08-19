@@ -33,7 +33,7 @@ enum Entry {
 		name: String,
 		year: u16,
 		created_on: SystemTime,
-		duration: u32,
+		duration: Option<u32>,
 		poster: Option<String>,
 		background: Option<String>,
 	},
@@ -256,9 +256,9 @@ impl From<Entry> for data::Entry {
 				data: data::EntryData::Movie(data::Movie {
 					duration,
 					year,
-					change: Change::Insert,
 					progress: None,
 				}),
+				created_on: DateTime::from_std(created_on),
 				updated_on: DateTime::from_std(created_on),
 				genres: vec![],
 				change: Change::Insert,
@@ -287,9 +287,9 @@ impl From<Entry> for data::Entry {
 					rating: None,
 					data: data::EntryData::Series(data::Series {
 						seasons: seasons.into_iter().map(Into::into).collect(),
-						change: Change::Insert,
 					}),
 					// will be calculated later
+					created_on: DateTime::from_std(latest_updated_on),
 					updated_on: DateTime::from_std(latest_updated_on),
 					genres: vec![],
 					change: Change::Insert,
@@ -308,6 +308,7 @@ impl From<Season> for data::Season {
 			original_name: None,
 			episodes: s.episodes.into_iter().map(Into::into).collect(),
 			change: Change::Insert,
+			created_on: DateTime::now(),
 		}
 	}
 }
@@ -319,7 +320,10 @@ impl From<Episode> for data::Episode {
 			episode: e.episode,
 			name: e.name,
 			original_name: None,
-			updated_on: DateTime::from_std(e.created_on),
+			year: None,
+			created_on: DateTime::from_std(e.created_on),
+			description: None,
+			duration: None,
 			change: Change::Insert,
 			progress: None,
 		}

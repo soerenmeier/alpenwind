@@ -7,9 +7,9 @@ CREATE TABLE cinema_entries (
     description TEXT,
     poster TEXT,
     background TEXT,
-    rating FLOAT,
+    rating REAL,
     duration INTEGER,
-    first_publication SMALLINT NOT NULL,
+    first_publication SMALLINT,
     created_on TIMESTAMP NOT NULL,
     last_updated TIMESTAMP NOT NULL
 );
@@ -62,7 +62,7 @@ CREATE TABLE cinema_progress (
     entry_id TEXT REFERENCES cinema_entries(id),
     episode_id TEXT REFERENCES cinema_episodes(id),
     user_id TEXT NOT NULL,
-    progress FLOAT NOT NULL,
+    progress REAL NOT NULL,
     created_on TIMESTAMP NOT NULL,
     updated_on TIMESTAMP NOT NULL,
     last_watch TIMESTAMP,

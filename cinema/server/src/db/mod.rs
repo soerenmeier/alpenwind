@@ -5,16 +5,14 @@ use super::data;
 use std::collections::HashMap;
 
 use chuchi::Resource;
-use chuchi_postgres::json::Json;
 use chuchi_postgres::row::ToRow;
 use chuchi_postgres::table::table::TableWithConn;
 use chuchi_postgres::table::Table;
 use chuchi_postgres::time::DateTime;
-use chuchi_postgres::{filter, try2, whr, Connection, FromRow, ToRow};
+use chuchi_postgres::{filter, whr, Connection, FromRow, ToRow};
 use chuchi_postgres::{Database, Result, UniqueId};
 
 use core_lib::migration_files;
-use serde::{Deserialize, Serialize};
 
 const MIGRATIONS: &[(&str, &str)] = migration_files!("cinema-create");
 
@@ -76,44 +74,44 @@ pub struct CinemaDbWithConn<'a> {
 	progress: TableWithConn<'a>,
 }
 
-#[derive(Debug, Clone, PartialEq, FromRow)]
+#[derive(Debug, Clone, PartialEq, FromRow, ToRow)]
 pub struct Entry {
-	id: UniqueId,
-	tmdb_id: Option<i64>,
-	kind: i8,
-	name: String,
-	original_name: Option<String>,
-	description: Option<String>,
-	poster: Option<String>,
-	background: Option<String>,
-	rating: Option<f32>,
-	duration: Option<i32>,
-	first_publication: i16,
-	created_on: DateTime,
-	last_updated: DateTime,
+	pub id: UniqueId,
+	pub tmdb_id: Option<i64>,
+	pub kind: i16,
+	pub name: String,
+	pub original_name: Option<String>,
+	pub description: Option<String>,
+	pub poster: Option<String>,
+	pub background: Option<String>,
+	pub rating: Option<f32>,
+	pub duration: Option<i32>,
+	pub first_publication: Option<i16>,
+	pub created_on: DateTime,
+	pub last_updated: DateTime,
 }
 
-#[derive(Debug, Clone, PartialEq, FromRow)]
+#[derive(Debug, Clone, PartialEq, FromRow, ToRow)]
 pub struct Season {
-	id: UniqueId,
-	entry_id: UniqueId,
-	season: i16,
-	name: Option<String>,
-	original_name: Option<String>,
-	created_on: DateTime,
+	pub id: UniqueId,
+	pub entry_id: UniqueId,
+	pub season: i16,
+	pub name: Option<String>,
+	pub original_name: Option<String>,
+	pub created_on: DateTime,
 }
 
-#[derive(Debug, Clone, PartialEq, FromRow)]
+#[derive(Debug, Clone, PartialEq, FromRow, ToRow)]
 pub struct Episode {
-	id: UniqueId,
-	season_id: UniqueId,
-	episode: i16,
-	name: String,
-	original_name: Option<String>,
-	publication_year: Option<i16>,
-	created_on: DateTime,
-	description: Option<String>,
-	duration: Option<i32>,
+	pub id: UniqueId,
+	pub season_id: UniqueId,
+	pub episode: i16,
+	pub name: String,
+	pub original_name: Option<String>,
+	pub publication_year: Option<i16>,
+	pub created_on: DateTime,
+	pub description: Option<String>,
+	pub duration: Option<i32>,
 }
 
 #[derive(Debug, Clone, PartialEq, FromRow)]
@@ -162,21 +160,22 @@ fn into_data(
 					poster: e.poster,
 					background: e.background,
 					rating: e.rating,
+					created_on: e.created_on,
 					updated_on: e.last_updated,
 					genres: vec![],
 					data: match e.kind {
 						0 => data::EntryData::Movie(data::Movie {
 							duration: e
 								.duration
-								.and_then(|u| u.try_into().ok())
-								.unwrap_or(0),
-							year: try_into_def(e.first_publication, 0),
-							change: Change::None,
+								.and_then(|u| u.try_into().ok()),
+							year: try_into_def(
+								e.first_publication.unwrap_or(0),
+								0,
+							),
 							progress: None,
 						}),
 						1 => data::EntryData::Series(data::Series {
 							seasons: vec![],
-							change: Change::None,
 						}),
 						_ => unreachable!(),
 					},
@@ -200,6 +199,7 @@ fn into_data(
 						original_name: s.original_name,
 						episodes: vec![],
 						change: Change::None,
+						created_on: s.created_on,
 					},
 				),
 			)
@@ -218,10 +218,12 @@ fn into_data(
 						episode: e.episode.try_into().unwrap(),
 						name: e.name,
 						original_name: e.original_name,
-						// year: e.publication_year,
-						// duration: e.duration.unwrap_or(0),
-						// description: e.description,
-						updated_on: e.created_on,
+						year: e
+							.publication_year
+							.and_then(|u| u.try_into().ok()),
+						duration: e.duration.and_then(|u| u.try_into().ok()),
+						description: e.description,
+						created_on: e.created_on,
 						change: Change::None,
 						progress: None,
 					},
@@ -399,6 +401,45 @@ impl CinemaDbWithConn<'_> {
 		conn.execute_raw(&stmt, progress.params()).await.map(|_| ())
 
 		// self.table_progress.execute_raw(sql, &prog.to_data()).await
+	}
+
+	pub async fn insert_entry(&self, entry: &Entry) -> Result<()> {
+		self.entries.insert(entry).await
+	}
+
+	pub async fn update_entry(&self, entry: &Entry) -> Result<()> {
+		let id = &entry.id;
+		self.entries.update(entry, whr!(id)).await
+	}
+
+	pub async fn delete_entry(&self, id: &UniqueId) -> Result<()> {
+		self.entries.delete(whr!(id)).await
+	}
+
+	pub async fn insert_season(&self, season: &Season) -> Result<()> {
+		self.seasons.insert(season).await
+	}
+
+	pub async fn update_season(&self, season: &Season) -> Result<()> {
+		let id = &season.id;
+		self.seasons.update(season, whr!(id)).await
+	}
+
+	pub async fn delete_season(&self, id: &UniqueId) -> Result<()> {
+		self.seasons.delete(whr!(id)).await
+	}
+
+	pub async fn insert_episode(&self, episode: &Episode) -> Result<()> {
+		self.episodes.insert(episode).await
+	}
+
+	pub async fn update_episode(&self, episode: &Episode) -> Result<()> {
+		let id = &episode.id;
+		self.episodes.update(episode, whr!(id)).await
+	}
+
+	pub async fn delete_episode(&self, id: &UniqueId) -> Result<()> {
+		self.episodes.delete(whr!(id)).await
 	}
 }
 
