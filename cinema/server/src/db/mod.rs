@@ -80,7 +80,7 @@ pub struct CinemaDbWithConn<'a> {
 pub struct Entry {
 	id: UniqueId,
 	tmdb_id: Option<i64>,
-	r#type: i8,
+	kind: i8,
 	name: String,
 	original_name: Option<String>,
 	description: Option<String>,
@@ -124,14 +124,14 @@ pub struct EntryGenre {
 
 #[derive(Debug, Clone, PartialEq, FromRow, ToRow)]
 pub struct Progress {
-	entry_id: Option<UniqueId>,
-	episode_id: Option<UniqueId>,
-	user_id: UniqueId,
-	progress: f32,
-	created_on: DateTime,
-	updated_on: DateTime,
+	pub entry_id: Option<UniqueId>,
+	pub episode_id: Option<UniqueId>,
+	pub user_id: UniqueId,
+	pub progress: f32,
+	pub created_on: DateTime,
+	pub updated_on: DateTime,
 	// the time this entry was last completelly watched
-	last_watch: Option<DateTime>,
+	pub last_watch: Option<DateTime>,
 }
 
 fn try_into_def<T, O>(v: T, def: O) -> O
@@ -164,7 +164,7 @@ fn into_data(
 					rating: e.rating,
 					updated_on: e.last_updated,
 					genres: vec![],
-					data: match e.r#type {
+					data: match e.kind {
 						0 => data::EntryData::Movie(data::Movie {
 							duration: e
 								.duration
@@ -346,6 +346,37 @@ impl CinemaDbWithConn<'_> {
 		Ok(entries.into_iter().next().map(|(_, e)| e))
 	}
 
+	pub async fn movie_exists(&self, id: &UniqueId) -> Result<bool> {
+		#[derive(Debug, FromRow)]
+		struct EntryType {
+			id: UniqueId,
+			kind: i8,
+		}
+
+		let entry = self.entries.select_opt::<EntryType>(filter!(id)).await?;
+
+		Ok(entry.map(|e| e.kind == 0).unwrap_or(false))
+	}
+
+	pub async fn episode_exists(&self, id: &UniqueId) -> Result<bool> {
+		Ok(self.episodes.count("id", filter!(id)).await? > 0)
+	}
+
+	pub async fn progress_by_id_user(
+		&self,
+		entry_id: &Option<UniqueId>,
+		episode_id: &Option<UniqueId>,
+		user_id: &UniqueId,
+	) -> Result<Option<Progress>> {
+		let progress = self
+			.progress
+			.select_opt::<Progress>(
+				filter!(entry_id AND episode_id AND user_id),
+			)
+			.await?;
+		Ok(progress)
+	}
+
 	pub async fn update_progress(&self, progress: Progress) -> Result<()> {
 		// let prog = EntryProgress::from_entry(entry, user_id);
 		let table = self.progress.name();
@@ -368,12 +399,6 @@ impl CinemaDbWithConn<'_> {
 		conn.execute_raw(&stmt, progress.params()).await.map(|_| ())
 
 		// self.table_progress.execute_raw(sql, &prog.to_data()).await
-	}
-
-	pub async fn apply_changes(&self, changes: &[data::Entry]) -> Result<()> {
-		eprintln!("todo: apply changes");
-
-		Ok(())
 	}
 }
 

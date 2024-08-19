@@ -1,7 +1,8 @@
-use crate::api::{Entries, EntriesReq, ProgressMsg, ProgressReq};
-use crate::data::{Entry, Progress};
+use crate::api::data::{Entry, Progress};
+use crate::api::{Entries, EntriesReq, ProgressId, ProgressMsg, ProgressReq};
+use crate::data;
+use crate::db::{self, CinemaDb};
 use crate::error::{Error, Result};
-use crate::CinemaDb;
 
 use chuchi_postgres::connection::ConnectionOwned;
 use chuchi_postgres::Database;
@@ -25,7 +26,7 @@ pub async fn entries(
 			.all_by_user(&sess.user.id)
 			.await?
 			.into_iter()
-			.map(|(_, e)| e)
+			.map(|(_, e)| e.into())
 			.collect(),
 	})
 }
@@ -41,12 +42,6 @@ pub async fn progress(
 	let (_, user) = users.sess_user_from_token(&req.token).await?;
 
 	loop {
-		let conn = database
-			.get()
-			.await
-			.map_err(|e| Error::Internal(e.to_string()))?;
-		let cinema = cinema.with_conn(conn.connection());
-
 		let msg = match stream.recv().await {
 			Ok(m) => m,
 			Err(StreamError::Closed) => return Ok(()),
@@ -55,56 +50,58 @@ pub async fn progress(
 			}
 		};
 
-		match msg {
-			ProgressMsg::Movie(m) => {
-				// get the data
-				let mut entry =
-					cinema.by_id_and_user(&m.id, &user.id).await?.ok_or_else(
-						|| Error::Request("movie not found".into()),
-					)?;
+		let mut conn = database
+			.get()
+			.await
+			.map_err(|e| Error::Internal(e.to_string()))?;
+		let cinema_r = cinema.with_conn(conn.connection());
 
-				let movie = match &mut entry {
-					Entry::Movie(m) => m,
-					_ => return Err(Error::Request("not a movie".into())),
-				};
+		// check if the associated id exists and the create a progress
+		let mut movie_id = None;
+		let mut episode_id = None;
+		let exists = match msg.id {
+			ProgressId::Movie(id) => {
+				movie_id = Some(id);
 
-				movie.progress = Some(Progress {
-					percent: m.percent,
-					updated_on: DateTime::now(),
-				});
-
-				cinema.update_progress(&entry, &user.id).await?;
+				cinema_r.movie_exists(&id).await?
 			}
-			ProgressMsg::Series(s) => {
-				// get the data
-				let mut entry =
-					cinema.by_id_and_user(&s.id, &user.id).await?.ok_or_else(
-						|| Error::Request("series not found".into()),
-					)?;
+			ProgressId::Episode(id) => {
+				episode_id = Some(id);
 
-				let series = match &mut entry {
-					Entry::Series(s) => s,
-					_ => return Err(Error::Request("not a series".into())),
-				};
-
-				let episode = series
-					.seasons
-					.get_mut(s.season as usize)
-					.and_then(|season| {
-						season.episodes.get_mut(s.episode as usize)
-					})
-					.ok_or_else(|| {
-						Error::Request("episode not found".into())
-					})?;
-
-				episode.progress = Some(Progress {
-					percent: s.percent,
-					updated_on: DateTime::now(),
-				});
-
-				cinema.update_progress(&entry, &user.id).await?;
+				cinema_r.episode_exists(&id).await?
 			}
+		};
+
+		if !exists {
+			return Err(Error::NotFound);
 		}
+
+		drop(cinema_r);
+		// open a transaction
+		let trans = conn.transaction().await?;
+		let cinema = cinema.with_conn(trans.connection());
+
+		let mut prog = cinema
+			.progress_by_id_user(&movie_id, &episode_id, &user.id)
+			.await?
+			.unwrap_or_else(|| db::Progress {
+				entry_id: movie_id,
+				episode_id,
+				user_id: user.id,
+				progress: 0f32,
+				created_on: DateTime::now(),
+				updated_on: DateTime::now(),
+				last_watch: None,
+			});
+
+		// todo do we wan't it like this?
+		if msg.percent > 0.9999 {
+			prog.last_watch = Some(DateTime::now());
+		}
+		prog.progress = msg.percent;
+		prog.updated_on = DateTime::now();
+
+		cinema.update_progress(prog).await?;
 	}
 }
 

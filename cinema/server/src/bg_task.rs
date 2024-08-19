@@ -61,13 +61,12 @@ async fn task_tick(
 	// add change: Change::Updated or Inserted as needed
 
 	{
-		let conn =
+		let mut conn =
 			db.get().await.map_err(|e| Error::Internal(e.to_string()))?;
 		let trans = conn.transaction().await?;
-		let cinema = cinema.with_conn(conn.connection());
+		let cinema = cinema.with_conn(trans.connection());
 
-		// todo this is not optimal but big insert should not happen often
-		cinema.apply_changes(&changes).await?;
+		eprintln!("todo: apply changes");
 	}
 
 	Ok(())

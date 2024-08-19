@@ -1,7 +1,7 @@
 CREATE TABLE cinema_entries (
     id TEXT PRIMARY KEY,
     tmdb_id BIGINT,
-    type SMALLINT CHECK (type IN (0, 1)),
+    kind SMALLINT CHECK (kind IN (0, 1)),
     name TEXT NOT NULL,
     original_name TEXT,
     description TEXT,

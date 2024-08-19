@@ -16,6 +16,7 @@ pub enum Error {
 	MissingDataToken,
 	InvalidDataToken,
 	InvalidUser,
+	NotFound,
 	Internal(String),
 	Request(String),
 }
@@ -38,6 +39,7 @@ impl error::ApiError for Error {
 			| Self::MissingDataToken
 			| Self::InvalidDataToken
 			| Self::InvalidUser => StatusCode::FORBIDDEN,
+			Self::NotFound => StatusCode::NOT_FOUND,
 			Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
 			Self::Request(_) => StatusCode::BAD_REQUEST,
 		}

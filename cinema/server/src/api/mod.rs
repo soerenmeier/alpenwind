@@ -1,5 +1,7 @@
-use crate::data::Entry;
+pub mod data;
+
 use crate::error::Error;
+use data::Entry;
 
 use core_lib::users::Token;
 
@@ -36,25 +38,14 @@ pub struct ProgressReq {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ProgressMsg {
-	Movie(MovieProgress),
-	Series(SeriesProgress),
+pub enum ProgressId {
+	Movie(UniqueId),
+	Episode(UniqueId),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MovieProgress {
-	pub id: UniqueId,
-	pub percent: f32,
-	pub position: f32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SeriesProgress {
-	pub id: UniqueId,
-	pub season: u32,
-	pub episode: u32,
+pub struct ProgressMsg {
+	pub id: ProgressId,
 	pub percent: f32,
 	pub position: f32,
 }
