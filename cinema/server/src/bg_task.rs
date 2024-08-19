@@ -1,6 +1,6 @@
 use crate::db::CinemaDb;
 use crate::error::{Error, Result};
-use crate::fs::{changes_from_fs, EntryChange};
+use crate::fs::changes_from_fs;
 use crate::CinemaConf;
 
 use chuchi::resources::Resources;
@@ -45,32 +45,29 @@ async fn task_tick(
 	cinema: &CinemaDb,
 	cfg: &CinemaConf,
 ) -> Result<()> {
-	let conn = db.get().await.map_err(|e| Error::Internal(e.to_string()))?;
-	let cinema = cinema.with_conn(conn.connection());
-	let entries = cinema.all().await?;
+	let entries = {
+		let conn =
+			db.get().await.map_err(|e| Error::Internal(e.to_string()))?;
+		let cinema = cinema.with_conn(conn.connection());
+
+		cinema.all().await?
+	};
 
 	let changes = changes_from_fs(&entries, &cfg)
 		.await
 		.map_err(|e| Error::Internal(e.to_string()))?;
 
-	// todo this is not optimal but big insert should not happen often
-	for change in changes {
-		match change {
-			EntryChange::Insert(entry) => {
-				eprintln!("cinema insert {entry:?}");
-				cinema.insert_data(&entry).await?;
-			}
-			EntryChange::Update(entry) => {
-				eprintln!("cinema update {entry:?}");
-				cinema.update_data(&entry).await?;
-			}
-			EntryChange::Remove(id) => {
-				eprintln!("cinema remove {id:?}");
-				if cfg.allow_deletes {
-					cinema.delete_by_id(&id).await?;
-				}
-			}
-		}
+	// todo(thierry): modify data from some movie db and
+	// add change: Change::Updated or Inserted as needed
+
+	{
+		let conn =
+			db.get().await.map_err(|e| Error::Internal(e.to_string()))?;
+		let trans = conn.transaction().await?;
+		let cinema = cinema.with_conn(conn.connection());
+
+		// todo this is not optimal but big insert should not happen often
+		cinema.apply_changes(&changes).await?;
 	}
 
 	Ok(())

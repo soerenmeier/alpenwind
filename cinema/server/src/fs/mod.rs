@@ -3,18 +3,22 @@ pub(super) mod route;
 mod util;
 
 use super::data;
+use crate::data::Change;
 use crate::CinemaConf;
 
 use std::collections::HashMap;
-use std::io;
+use std::time::SystemTime;
+use std::{io, mem};
 
 use chuchi_postgres::time::DateTime;
 use chuchi_postgres::UniqueId;
+use util::IndexedVec;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct EntryId {
 	kind: EntryKind,
 	name: String,
+	year: Option<u16>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -25,168 +29,299 @@ enum EntryKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Entry {
-	Movie { name: String, year: u32 },
-	Series { name: String, seasons: Vec<Season> },
+	Movie {
+		name: String,
+		year: u16,
+		created_on: SystemTime,
+		duration: u32,
+		poster: Option<String>,
+		background: Option<String>,
+	},
+	Series {
+		name: String,
+		seasons: Vec<Season>,
+		poster: Option<String>,
+		background: Option<String>,
+	},
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Season {
 	name: Option<String>,
-	episodes: Vec<String>,
+	season: u16,
+	episodes: Vec<Episode>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-enum UpdatedOnData {
-	Movie { updated_on: DateTime },
-	Series { seasons: Vec<Vec<DateTime>> },
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Episode {
+	name: String,
+	episode: u16,
+	created_on: SystemTime,
 }
 
-#[derive(Debug, Clone)]
-pub(super) enum EntryChange {
-	Insert(data::Entry),
-	Update(data::Entry),
-	Remove(UniqueId),
+macro_rules! changes {
+	($changed:ident, $old:expr, $ident:ident) => {
+		if $old.$ident != $ident {
+			$old.$ident = $ident;
+			$changed = true;
+		}
+	};
+	($changed:ident, $old:expr, $ident:ident = $new:expr) => {
+		if $old.$ident != $new {
+			$old.$ident = $new;
+			$changed = true;
+		}
+	};
+	($changed:ident, $old:expr, $ident:ident, $($tt:tt)*)=> {
+		changes!($changed, $old, $ident);
+		changes!($changed, $old, $($tt)*);
+	};
 }
 
 /// take a list of Entries from the database
 /// and calculate based on the filesystem what entries changeds
 pub(super) async fn changes_from_fs(
-	data_entries: &[data::Entry],
+	data_entries: &HashMap<UniqueId, data::Entry>,
 	cfg: &CinemaConf,
-) -> io::Result<Vec<EntryChange>> {
-	let mut entries = convert_entries(data_entries);
-
+) -> io::Result<Vec<data::Entry>> {
 	let fs_entries = read::entries_from_fs(cfg).await?;
 
-	let mut changes = vec![];
-
-	for (id, (entry, updated_on)) in fs_entries {
-		match entries.remove(&id) {
-			Some((uid, db_entry)) => {
-				if entry == db_entry {
-					// the entries are the same don't do any change
-					continue;
-				}
-
-				let data_entry = entry.into_data(updated_on, uid);
-				changes.push(EntryChange::Update(data_entry));
-			}
-			None => {
-				// entry does not exist create a new one
-				let data_entry = entry.into_data(updated_on, UniqueId::new());
-				changes.push(EntryChange::Insert(data_entry));
-			}
-		}
-	}
-
-	// now check if some data should be deleted
-	for (_, (uid, _)) in entries {
-		changes.push(EntryChange::Remove(uid));
-	}
-
-	Ok(changes)
-}
-
-/// Converts a data::Entry into a more useful type for doing comparisonss
-fn convert_entries(
-	entries: &[data::Entry],
-) -> HashMap<EntryId, (UniqueId, Entry)> {
-	let mut map = HashMap::with_capacity(entries.len());
-
-	for entry in entries {
-		match entry {
-			data::Entry::Movie(m) => {
-				let id = EntryId {
-					kind: EntryKind::Movie,
-					name: m.name.clone(),
-				};
-
-				let entry = Entry::Movie {
-					name: m.name.clone(),
-					year: m.year,
-				};
-
-				map.insert(id, (m.id, entry));
-			}
-			data::Entry::Series(s) => {
-				let id = EntryId {
-					kind: EntryKind::Series,
-					name: s.name.clone(),
-				};
-
-				let entry = Entry::Series {
-					name: s.name.clone(),
-					seasons: s
-						.seasons
-						.iter()
-						.map(|s| Season {
-							name: s.name.clone(),
-							episodes: s
-								.episodes
-								.iter()
-								.map(|e| e.name.clone())
-								.collect(),
-						})
-						.collect(),
-				};
-
-				map.insert(id, (s.id, entry));
-			}
-		}
-	}
-
-	map
-}
-
-impl Entry {
-	/// converts an entry back to a data::Entry to store it in the database
-	fn into_data(self, updated_on: UpdatedOnData, id: UniqueId) -> data::Entry {
-		match (self, updated_on) {
+	// make a copy of all entries and add an internal id to them
+	let mut entries: HashMap<EntryId, data::Entry> = data_entries
+		.values()
+		.map(|e| {
+			let mut e = e.clone();
+			// mark all entries as removed and we will change them later
+			e.change = Change::Remove;
 			(
-				Entry::Movie { name, year },
-				UpdatedOnData::Movie { updated_on },
-			) => data::Entry::Movie(data::Movie {
-				id,
+				match &e.data {
+					data::EntryData::Movie(movie) => EntryId {
+						kind: EntryKind::Movie,
+						name: e.name.clone(),
+						year: Some(movie.year),
+					},
+					data::EntryData::Series(_) => EntryId {
+						kind: EntryKind::Series,
+						name: e.name.clone(),
+						year: None,
+					},
+				},
+				e,
+			)
+		})
+		.collect();
+
+	for (id, entry) in fs_entries {
+		let Some(d_entry) = entries.get_mut(&id) else {
+			entries.insert(id, data::Entry::from(entry));
+			// convert entry to data entry
+			continue;
+		};
+
+		// now we know the entry already exists
+		// let's compare them and find out what changed
+
+		match entry {
+			Entry::Movie {
 				name,
 				year,
-				updated_on,
-				progress: None,
-			}),
-			(
-				Entry::Series { name, seasons },
-				UpdatedOnData::Series {
-					seasons: updated_on_seasons,
-				},
-			) => {
-				assert_eq!(seasons.len(), updated_on_seasons.len());
+				duration,
+				created_on,
+				poster,
+				background,
+			} => {
+				let mut changed = false;
+				let updated_on = DateTime::from_std(created_on);
+				changes!(
+					changed, d_entry, name, poster, background, updated_on
+				);
 
-				data::Entry::Series(data::Series {
-					id,
-					name,
-					seasons: seasons
-						.into_iter()
-						.zip(updated_on_seasons.into_iter())
-						.map(|(s, u)| {
-							assert_eq!(s.episodes.len(), u.len());
+				let data::EntryData::Movie(movie) = &mut d_entry.data else {
+					unreachable!()
+				};
 
-							data::Season {
-								name: s.name,
-								episodes: s
-									.episodes
-									.into_iter()
-									.zip(u.into_iter())
-									.map(|(e, u)| data::Episode {
-										name: e,
-										updated_on: u,
-										progress: None,
-									})
-									.collect(),
-							}
-						})
-						.collect(),
-				})
+				changes!(changed, movie, duration, year);
+
+				d_entry.change.set_update(changed);
 			}
-			_ => unreachable!(),
+			Entry::Series {
+				name,
+				seasons,
+				poster,
+				background,
+			} => {
+				let mut changed = false;
+				changes!(changed, d_entry, name, poster, background);
+
+				let data::EntryData::Series(series) = &mut d_entry.data else {
+					unreachable!()
+				};
+
+				d_entry.change.set_update(changed);
+
+				changes_seasons(&mut series.seasons, seasons);
+			}
+		}
+	}
+
+	Ok(entries.into_iter().map(|(_, e)| e).collect())
+}
+
+fn changes_seasons(d_seasons: &mut Vec<data::Season>, seasons: Vec<Season>) {
+	// we need to split the seasons
+	let mut i_seasons: IndexedVec<_> = mem::take(d_seasons)
+		.into_iter()
+		.map(|s| (s.season as usize, s))
+		.collect();
+
+	for season in &mut i_seasons {
+		season.change = Change::Remove;
+	}
+
+	// now we need to compare the seasons
+	for season in seasons {
+		let Some(d_season) = i_seasons.get_mut(season.season as usize) else {
+			// insert a new one
+			i_seasons.set(season.season as usize, season.into());
+			continue;
+		};
+
+		// now we know the season already exists
+		let mut changed = false;
+		changes!(changed, d_season, name = season.name);
+
+		d_season.change.set_update(changed);
+
+		changes_episodes(&mut d_season.episodes, season.episodes);
+	}
+
+	*d_seasons = i_seasons.into_iter().collect();
+}
+
+fn changes_episodes(
+	d_episodes: &mut Vec<data::Episode>,
+	episodes: Vec<Episode>,
+) {
+	// we need to split the episodes into an indexed vec
+	// this allows us to easily find the episodes and insert new ones
+	let mut i_episodes: IndexedVec<_> = mem::take(d_episodes)
+		.into_iter()
+		.map(|e| (e.episode as usize, e))
+		.collect();
+
+	// at first mark all episodes as removed
+	for episode in &mut i_episodes {
+		episode.change = Change::Remove;
+	}
+
+	// now we need to compare the episodes
+	for episode in episodes {
+		let Some(d_episode) = i_episodes.get_mut(episode.episode as usize)
+		else {
+			// insert a new one
+			i_episodes.set(episode.episode as usize, episode.into());
+			continue;
+		};
+
+		// now we know the episode already exists
+		let mut changed = false;
+		changes!(changed, d_episode, name = episode.name);
+
+		d_episode.change.set_update(changed);
+	}
+
+	*d_episodes = i_episodes.into_iter().collect();
+}
+
+/// create a data entry from an Entry
+impl From<Entry> for data::Entry {
+	fn from(e: Entry) -> data::Entry {
+		match e {
+			Entry::Movie {
+				name,
+				year,
+				duration,
+				created_on,
+				poster,
+				background,
+			} => data::Entry {
+				id: UniqueId::new(),
+				tmdb_id: None,
+				name,
+				original_name: None,
+				description: None,
+				poster,
+				background,
+				rating: None,
+				data: data::EntryData::Movie(data::Movie {
+					duration,
+					year,
+					change: Change::Insert,
+					progress: None,
+				}),
+				updated_on: DateTime::from_std(created_on),
+				genres: vec![],
+				change: Change::Insert,
+			},
+			Entry::Series {
+				name,
+				seasons,
+				poster,
+				background,
+			} => {
+				let latest_updated_on = seasons
+					.iter()
+					.map(|s| s.episodes.iter().map(|e| e.created_on))
+					.flatten()
+					.max()
+					.unwrap_or(SystemTime::UNIX_EPOCH);
+
+				data::Entry {
+					id: UniqueId::new(),
+					tmdb_id: None,
+					name,
+					original_name: None,
+					description: None,
+					poster,
+					background,
+					rating: None,
+					data: data::EntryData::Series(data::Series {
+						seasons: seasons.into_iter().map(Into::into).collect(),
+						change: Change::Insert,
+					}),
+					// will be calculated later
+					updated_on: DateTime::from_std(latest_updated_on),
+					genres: vec![],
+					change: Change::Insert,
+				}
+			}
+		}
+	}
+}
+
+impl From<Season> for data::Season {
+	fn from(s: Season) -> data::Season {
+		data::Season {
+			id: UniqueId::new(),
+			season: s.season,
+			name: s.name,
+			original_name: None,
+			episodes: s.episodes.into_iter().map(Into::into).collect(),
+			change: Change::Insert,
+		}
+	}
+}
+
+impl From<Episode> for data::Episode {
+	fn from(e: Episode) -> data::Episode {
+		data::Episode {
+			id: UniqueId::new(),
+			episode: e.episode,
+			name: e.name,
+			original_name: None,
+			updated_on: DateTime::from_std(e.created_on),
+			change: Change::Insert,
+			progress: None,
 		}
 	}
 }

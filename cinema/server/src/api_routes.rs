@@ -21,7 +21,12 @@ pub async fn entries(
 	let cinema = cinema.with_conn(conn.connection());
 
 	Ok(Entries {
-		list: cinema.all_by_user(&sess.user.id).await?,
+		list: cinema
+			.all_by_user(&sess.user.id)
+			.await?
+			.into_iter()
+			.map(|(_, e)| e)
+			.collect(),
 	})
 }
 
@@ -65,7 +70,6 @@ pub async fn progress(
 
 				movie.progress = Some(Progress {
 					percent: m.percent,
-					position: m.position,
 					updated_on: DateTime::now(),
 				});
 
@@ -95,7 +99,6 @@ pub async fn progress(
 
 				episode.progress = Some(Progress {
 					percent: s.percent,
-					position: s.position,
 					updated_on: DateTime::now(),
 				});
 

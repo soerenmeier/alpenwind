@@ -1,23 +1,25 @@
 //! Read files from the filesystem
+//!
+//! todo add multiple media versions
+//! todo add background support
 
 use super::util::IndexedVec;
-use super::{Entry, EntryId, EntryKind, Season, UpdatedOnData};
+use super::{Entry, EntryId, EntryKind, Episode, Season};
 use crate::CinemaConf;
 
 use std::collections::HashMap;
 use std::io;
+use std::path::Path;
 use std::str::FromStr;
 
 use tokio::fs::{self, DirEntry};
-
-use chuchi_postgres::time::DateTime;
 
 use lazy_static::lazy_static;
 use regex::Regex;
 
 pub(super) async fn entries_from_fs(
 	cfg: &CinemaConf,
-) -> io::Result<HashMap<EntryId, (Entry, UpdatedOnData)>> {
+) -> io::Result<HashMap<EntryId, Entry>> {
 	let mut entries = HashMap::new();
 
 	movies_from_fs(cfg, &mut entries).await?;
@@ -39,7 +41,7 @@ where
 /// Expects the posters to be called `<name> <year>.jpg` and be in the movie_posters folder
 async fn movies_from_fs(
 	cfg: &CinemaConf,
-	entries: &mut HashMap<EntryId, (Entry, UpdatedOnData)>,
+	entries: &mut HashMap<EntryId, Entry>,
 ) -> io::Result<()> {
 	// read movies
 	let mut dir_reader = fs::read_dir(&cfg.movies_dir).await?;
@@ -55,41 +57,37 @@ async fn movies_from_fs(
 			continue;
 		};
 
-		let created = DateTime::from_std(metadata.created()?);
+		let created = metadata.created()?;
 
+		let poster_name = format!("{name}.jpg",);
 		let poster_exists =
-			fs::metadata(format!("{}/{name}.jpg", cfg.movie_posters_dir))
+			fs::metadata(Path::new(&cfg.movie_posters_dir).join(&poster_name))
 				.await
 				.map(|m| m.is_file())
 				.unwrap_or(false);
-
-		if !poster_exists {
-			eprintln!("poster for {name} not found");
-			continue;
-		}
 
 		let (name, year) = name
 			.rsplit_once(' ')
 			.ok_or_else(|| io_error("no year found"))?;
 
-		let year: u32 = year.parse().map_err(|_| io_error("no year found"))?;
+		let year: u16 = year.parse().map_err(|_| io_error("no year found"))?;
 
 		let id = EntryId {
 			kind: EntryKind::Movie,
 			name: name.to_string(),
+			year: Some(year),
 		};
 
 		entries.insert(
 			id.clone(),
-			(
-				Entry::Movie {
-					name: name.to_string(),
-					year,
-				},
-				UpdatedOnData::Movie {
-					updated_on: created,
-				},
-			),
+			Entry::Movie {
+				name: name.to_string(),
+				year,
+				created_on: created,
+				duration: 0,
+				poster: poster_exists.then_some(poster_name),
+				background: None,
+			},
 		);
 	}
 
@@ -115,7 +113,7 @@ fn entry_name(dir_entry: &DirEntry) -> String {
 /// - - - Episode 1 eps1.0_hellofriend.mp4
 async fn series_from_fs(
 	cfg: &CinemaConf,
-	entries: &mut HashMap<EntryId, (Entry, UpdatedOnData)>,
+	entries: &mut HashMap<EntryId, Entry>,
 ) -> io::Result<()> {
 	// read movies
 	let mut dir_reader = fs::read_dir(&cfg.series_dir).await?;
@@ -128,17 +126,12 @@ async fn series_from_fs(
 		let name = entry_name(&dir_entry);
 		let path = dir_entry.path();
 
-		let poster_exists = fs::metadata(path.join("poster.jpg"))
+		let poster_name = "poster.jpg".to_string();
+		let poster_exists = fs::metadata(path.join(&poster_name))
 			.await
 			.map(|m| m.is_file())
 			.unwrap_or(false);
 
-		if !poster_exists {
-			eprintln!("poster for {name} not found");
-			continue;
-		}
-
-		// (SeasonName, Vec<(String, DateTime)>)
 		let mut seasons = IndexedVec::new();
 
 		let mut dir_reader = fs::read_dir(&path).await?;
@@ -177,10 +170,17 @@ async fn series_from_fs(
 					continue;
 				};
 
-				let created = DateTime::from_std(metadata.created()?);
+				let created = metadata.created()?;
 
 				let already_exists = episodes
-					.set(ep_name.number as usize - 1, (ep_name, created))
+					.set(
+						ep_name.number as usize - 1,
+						Episode {
+							name: ep_name.name,
+							episode: ep_name.number,
+							created_on: created,
+						},
+					)
 					.is_some();
 				if already_exists {
 					return Err(io_error(format!(
@@ -190,51 +190,36 @@ async fn series_from_fs(
 				}
 			}
 
-			let episodes =
-				episodes.into_contiguous_map(|(name, time)| (name.name, time));
+			let episodes = episodes.into_iter().collect();
 			let already_exists = seasons
-				.set(season_name.number as usize - 1, (season_name, episodes))
+				.set(
+					season_name.number as usize - 1,
+					Season {
+						name: season_name.name,
+						season: season_name.number,
+						episodes,
+					},
+				)
 				.is_some();
 			if already_exists {
 				return Err(io_error("season with that number already exists"));
 			}
 		}
 
-		let seasons =
-			seasons.into_contiguous_map(|(name, eps)| (name.name, eps));
-		let mut n_seasons = Vec::with_capacity(seasons.len());
-		let mut update_on_seasons = Vec::with_capacity(seasons.len());
-
-		for (name, eps) in seasons {
-			let (eps, eps_update): (Vec<_>, Vec<_>) = eps.into_iter().unzip();
-
-			n_seasons.push(Season {
-				name,
-				episodes: eps,
-			});
-			update_on_seasons.push(eps_update);
-		}
-
 		let id = EntryId {
 			kind: EntryKind::Series,
 			name: name.to_string(),
+			year: None,
 		};
-
-		if n_seasons.is_empty() {
-			continue;
-		}
 
 		entries.insert(
 			id.clone(),
-			(
-				Entry::Series {
-					name: name.to_string(),
-					seasons: n_seasons,
-				},
-				UpdatedOnData::Series {
-					seasons: update_on_seasons,
-				},
-			),
+			Entry::Series {
+				name: name.to_string(),
+				seasons: seasons.into_iter().collect(),
+				poster: poster_exists.then_some(poster_name),
+				background: None,
+			},
 		);
 	}
 
@@ -250,7 +235,7 @@ lazy_static! {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct SeasonName {
-	number: u32,
+	number: u16,
 	name: Option<String>,
 }
 
@@ -259,7 +244,7 @@ impl FromStr for SeasonName {
 
 	fn from_str(s: &str) -> Result<Self, ()> {
 		let caps = SEASON_REG.captures(s).ok_or(())?;
-		let number: u32 = caps
+		let number: u16 = caps
 			.get(1)
 			.and_then(|c| c.as_str().parse().ok())
 			.ok_or(())?;
@@ -280,7 +265,7 @@ impl FromStr for SeasonName {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct EpisodeName {
-	number: u32,
+	number: u16,
 	name: String,
 }
 
@@ -289,7 +274,7 @@ impl FromStr for EpisodeName {
 
 	fn from_str(s: &str) -> Result<Self, ()> {
 		let caps = EPISODE_REG.captures(s).ok_or(())?;
-		let number: u32 = caps
+		let number: u16 = caps
 			.get(1)
 			.and_then(|c| c.as_str().parse().ok())
 			.ok_or(())?;

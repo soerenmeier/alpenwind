@@ -1,3 +1,5 @@
+use crate::data::Change;
+
 use super::data;
 
 use std::collections::HashMap;
@@ -153,11 +155,12 @@ fn into_data(
 				e.id,
 				data::Entry {
 					id: e.id,
-					// tmdb_id: e.tmdb_id,
+					tmdb_id: e.tmdb_id,
 					name: e.name,
 					original_name: e.original_name,
 					description: e.description,
-					// poster: e.poster,
+					poster: e.poster,
+					background: e.background,
 					rating: e.rating,
 					updated_on: e.last_updated,
 					genres: vec![],
@@ -168,13 +171,16 @@ fn into_data(
 								.and_then(|u| u.try_into().ok())
 								.unwrap_or(0),
 							year: try_into_def(e.first_publication, 0),
+							change: Change::None,
 							progress: None,
 						}),
 						1 => data::EntryData::Series(data::Series {
 							seasons: vec![],
+							change: Change::None,
 						}),
 						_ => unreachable!(),
 					},
+					change: Change::None,
 				},
 			)
 		})
@@ -193,6 +199,7 @@ fn into_data(
 						name: s.name,
 						original_name: s.original_name,
 						episodes: vec![],
+						change: Change::None,
 					},
 				),
 			)
@@ -215,6 +222,7 @@ fn into_data(
 						// duration: e.duration.unwrap_or(0),
 						// description: e.description,
 						updated_on: e.created_on,
+						change: Change::None,
 						progress: None,
 					},
 				),
@@ -362,25 +370,10 @@ impl CinemaDbWithConn<'_> {
 		// self.table_progress.execute_raw(sql, &prog.to_data()).await
 	}
 
-	pub async fn insert_data(&self, entry: &data::Entry) -> Result<()> {
-		todo!()
-		// let e = Entry::from_data(entry);
+	pub async fn apply_changes(&self, changes: &[data::Entry]) -> Result<()> {
+		eprintln!("todo: apply changes");
 
-		// self.table.insert(&e).await
-	}
-
-	pub async fn update_data(&self, entry: &data::Entry) -> Result<()> {
-		todo!()
-		// let e = Entry::from_data(entry);
-		// let id = &e.id;
-
-		// self.table.update(&e, whr!(id)).await
-	}
-
-	pub async fn delete_by_id(&self, id: &UniqueId) -> Result<()> {
-		todo!()
-		// self.table.delete(whr!(id)).await?;
-		// self.table_progress.delete(whr!("entry_id" = id)).await
+		Ok(())
 	}
 }
 
