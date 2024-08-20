@@ -9,6 +9,7 @@ import {
 	Series,
 	Season,
 	Episode,
+	EntriesResp,
 } from './api.js';
 import DateTime from 'chuchi-legacy/time/DateTime';
 import { searchScore } from 'chuchi-utils/search';
@@ -18,7 +19,7 @@ class Entries {
 
 	/// entries: [Entry]
 	constructor(entries: ApiEntry[]) {
-		this.list = entries.map(e => new Entry(e));
+		this.list = entries.map(e => newEntry(e));
 	}
 
 	get(id: string) {
@@ -73,7 +74,7 @@ class SearchFilter {
 
 	match(e: Entry): number {
 		// lets first apply the filter
-		if (this.kind && e.kind !== this.kind) return 0;
+		if (this.kind && e.kind() !== this.kind) return 0;
 
 		if (!this.text) return 1;
 
@@ -89,10 +90,10 @@ class SearchFilter {
 		let av = null;
 		let bv = null;
 		if (field === 'Year') {
-			if (ae.inner.kind === 'Movie' && be.inner.kind === 'Movie') {
-				av = ae.inner.data.year();
-				bv = be.inner.data.year();
-			}
+			// if (ae.inner.kind === 'Movie' && be.inner.kind === 'Movie') {
+			// 	av = ae.inner.data.year();
+			// 	bv = be.inner.data.year();
+			// }
 		} else if (field === 'Updated') {
 			av = ae.updatedOn().time;
 			bv = be.updatedOn().time;
@@ -172,6 +173,10 @@ export class DashboardEntries {
 		this._sort();
 	}
 
+	getByGroup(group: string): Entry[] {
+		return this[group];
+	}
+
 	_replaceLastWatched(entry: Entry) {
 		let prev = this.lastWatched;
 		this.lastWatched = entry;
@@ -208,7 +213,7 @@ export class DashboardEntries {
 				return;
 			}
 
-			switch (entry.kind) {
+			switch (entry.kind()) {
 				case 'Movie':
 					this.movies.push(entry);
 					break;
@@ -237,7 +242,7 @@ export class DashboardEntries {
 	}
 }
 
-let entries = null;
+let entries: EntriesResp | null = null;
 
 export async function loadEntries(token: string) {
 	if (entries) return new Entries(entries.list);
@@ -251,193 +256,283 @@ export async function loadEntry(id: string, token: string) {
 	return entrs.get(id);
 }
 
-type EntryInner =
-	| { kind: 'Movie'; data: MovieEntry }
-	| { kind: 'Series'; data: SeriesEntry };
+export type PosterResolution = 'small' | 'full';
 
-export class Entry {
-	/// entry: Entry
-	inner: EntryInner;
+export interface Entry {
+	id(): string;
 
-	constructor(entry: ApiEntry) {
-		switch (entry.inner.kind) {
-			case 'Movie':
-				this.inner = {
-					kind: 'Movie',
-					data: new MovieEntry(entry.inner.data),
-				};
-				break;
-			case 'Series':
-				this.inner = {
-					kind: 'Series',
-					data: new SeriesEntry(entry.inner.data),
-				};
-				break;
-		}
-	}
+	kind(): 'Movie' | 'Series';
 
-	get kind(): string {
-		return this.inner.kind;
-	}
+	updatedOn(): DateTime;
 
-	get data(): MovieEntry | SeriesEntry {
-		return this.inner.data;
-	}
+	title(): string;
 
-	id(): string {
-		return this.data.id();
-	}
+	progressUpdatedOn(): DateTime | null;
 
-	title(): string {
-		return this.data.title();
-	}
+	percent(): number;
 
-	currentShortTitle(): string {
-		return this.data.currentShortTitle();
-	}
+	match(s: string): number;
 
-	currentTitle(): string {
-		return this.data.currentTitle();
-	}
+	poster(resolution?: PosterResolution): string;
 
-	match(val: string): number {
-		return this.data.match(val);
-	}
+	// the source of the current active video
+	activeSrc(): string;
 
-	poster(): string {
-		return this.data.inner.poster();
-	}
+	activePercent(): number;
 
-	fullPoster(): string {
-		return this.data.inner.fullPoster();
-	}
+	creditsPercent(duration: number): number;
 
-	src(): string {
-		return this.data.src();
-	}
+	// calcPercent(position: number, duration: number): number;
 
-	// when was the movie or series last updated
-	updatedOn(): DateTime {
-		return this.data.inner.getUpdatedOn();
-	}
+	setProgress(percent: number);
+}
 
-	// might return null
-	progressUpdatedOn(): DateTime | null {
-		return this.data.inner.progressUpdatedOn();
-	}
-
-	percent(): number {
-		return this.data.percent();
-	}
-
-	currentPercent(): number {
-		return this.data.currentPercent();
-	}
-
-	position(): number {
-		return this.data.position();
-	}
-
-	creditsPercent(totalLen: number): number {
-		return this.data.creditsPercent(totalLen);
-	}
-
-	creditsTime(totalLen: number): number {
-		return this.data.creditsTime(totalLen);
-	}
-
-	// this returns the progress percentage without the last few seconds
-	// which can be skipped
-	calcPercent(position: number, totalLen: number): number {
-		const perc = this.data.calcPercent(position, totalLen);
-		return Math.max(Math.min(perc, 1), 0);
-	}
-
-	setProgress(percent: number, position: number) {
-		this.data.setProgress(percent, position);
-	}
-
-	sendProgress(stream: ProgressStream) {
-		this.data.sendProgress(stream);
+function newEntry(entry: ApiEntry): Entry {
+	switch (entry.kind) {
+		case 'Movie':
+			return new MovieEntry(entry);
+		case 'Series':
+			return new SeriesEntry(entry);
 	}
 }
 
-export class MovieEntry {
-	inner: Movie;
+// type EntryInner =
+// 	| { kind: 'Movie'; data: MovieEntry }
+// 	| { kind: 'Series'; data: SeriesEntry };
 
-	constructor(movie: Movie) {
-		this.inner = movie;
+export class EntryOld {
+	/// entry: Entry
+	inner: ApiEntry;
+
+	constructor(entry: ApiEntry) {
+		// switch (entry.inner.kind) {
+		// 	case 'Movie':
+		// 		this.inner = {
+		// 			kind: 'Movie',
+		// 			data: new MovieEntry(entry.inner.data),
+		// 		};
+		// 		break;
+		// 	case 'Series':
+		// 		this.inner = {
+		// 			kind: 'Series',
+		// 			data: new SeriesEntry(entry.inner.data),
+		// 		};
+		// 		break;
+		// }
+	}
+
+	// get kind(): 'Movie' | 'Series' {
+	// 	return this.inner.kind;
+	// }
+
+	// get data(): MovieEntry | SeriesEntry {
+	// 	return this.inner.data;
+	// }
+
+	// id(): string {
+	// 	return this.data.id();
+	// }
+
+	// title(): string {
+	// 	return this.inner.title();
+	// }
+
+	// currentShortTitle(): string {
+	// 	return this.data.currentShortTitle();
+	// }
+
+	// currentTitle(): string {
+	// 	return this.data.currentTitle();
+	// }
+
+	// match(val: string): number {
+	// 	return this.data.match(val);
+	// }
+
+	// poster(): string {
+	// 	return this.data.inner.poster();
+	// }
+
+	// fullPoster(): string {
+	// 	return this.data.inner.fullPoster();
+	// }
+
+	// src(): string {
+	// 	return this.data.src();
+	// }
+
+	// // when was the movie or series last updated
+	// updatedOn(): DateTime {
+	// 	return this.inner.updatedOn;
+	// }
+
+	// // might return null
+	// progressUpdatedOn(): DateTime | null {
+	// 	return this.data.inner.progressUpdatedOn();
+	// }
+
+	// percent(): number {
+	// 	return this.data.percent();
+	// }
+
+	// currentPercent(): number {
+	// 	return this.data.currentPercent();
+	// }
+
+	// position(): number {
+	// 	return this.data.position();
+	// }
+
+	// creditsPercent(totalLen: number): number {
+	// 	return this.data.creditsPercent(totalLen);
+	// }
+
+	// creditsTime(totalLen: number): number {
+	// 	return this.data.creditsTime(totalLen);
+	// }
+
+	// // this returns the progress percentage without the last few seconds
+	// // which can be skipped
+	// calcPercent(position: number, totalLen: number): number {
+	// 	const perc = this.data.calcPercent(position, totalLen);
+	// 	return Math.max(Math.min(perc, 1), 0);
+	// }
+
+	// setProgress(percent: number, position: number) {
+	// 	this.data.setProgress(percent, position);
+	// }
+
+	// sendProgress(stream: ProgressStream) {
+	// 	this.data.sendProgress(stream);
+	// }
+}
+
+export class MovieEntry implements Entry {
+	inner: ApiEntry;
+	data: Movie;
+
+	constructor(entry: ApiEntry) {
+		this.inner = entry;
+		this.data = entry.data.data as Movie;
 	}
 
 	id(): string {
 		return this.inner.id;
 	}
 
+	kind(): 'Movie' {
+		return 'Movie';
+	}
+
+	updatedOn(): DateTime {
+		return this.inner.updatedOn;
+	}
+
 	title(): string {
-		return this.inner.title();
+		return this.inner.name + ' ' + this.data.year;
 	}
 
-	year(): number {
-		return this.inner.year;
+	progressUpdatedOn(): DateTime | null {
+		return this.data.progress?.updatedOn ?? null;
 	}
 
-	currentShortTitle(): string {
-		return this.title();
-	}
-
-	currentTitle(): string {
-		return this.title();
+	percent(): number {
+		return this.data.progress?.percent ?? 0;
 	}
 
 	match(val: string): number {
 		return searchScore(val, this.title());
 	}
 
-	src(): string {
-		return this.inner.src();
+	poster(resolution: PosterResolution = 'small'): string {
+		if (resolution === 'full') {
+			return this.data.fullPosterUrl(this.inner.name);
+		}
+		return this.data.posterUrl(this.inner.name);
 	}
 
-	percent(): number {
-		return this.inner.percent();
+	activeSrc(): string {
+		return this.data.videoSrc(this.inner.name);
 	}
 
-	currentPercent(): number {
-		return this.percent();
+	activePercent(): number {
+		return this.data.progress?.percent ?? 0;
 	}
 
-	position(): number {
-		return this.inner.position();
+	creditsPercent(duration: number): number {
+		return this.data.creditsDuration(duration) / duration;
 	}
 
-	creditsPercent(totalLen: number): number {
-		return this.inner.creditsDuration(totalLen) / totalLen;
+	// this returns the progress percentage without the last few seconds
+	// which can be skipped
+	// calcPercent(position: number, totalLen: number): number {
+	// 	const perc = position / this.creditsTime(totalLen);
+	// 	return Math.max(Math.min(perc, 1), 0);
+	// }
+
+	// year(): number {
+	// 	return this.inner.year;
+	// }
+
+	// currentShortTitle(): string {
+	// 	return this.title();
+	// }
+
+	// currentTitle(): string {
+	// 	return this.title();
+	// }
+
+	// src(): string {
+	// 	return this.inner.src();
+	// }
+
+	// percent(): number {
+	// 	return this.inner.percent();
+	// }
+
+	// currentPercent(): number {
+	// 	return this.percent();
+	// }
+
+	// position(): number {
+	// 	return this.inner.position();
+	// }
+
+	// creditsPercent(totalLen: number): number {
+	// 	return this.inner.creditsDuration(totalLen) / totalLen;
+	// }
+
+	private creditsTime(totalLen: number): number {
+		return totalLen - this.data.creditsDuration(totalLen);
 	}
 
-	creditsTime(totalLen: number): number {
-		return totalLen - this.inner.creditsDuration(totalLen);
-	}
+	// calcPercent(position: number, totalLen: number): number {
+	// 	return position / this.creditsTime(totalLen);
+	// }
 
-	calcPercent(position: number, totalLen: number): number {
-		return position / this.creditsTime(totalLen);
-	}
+	// setProgress(percent: number, position: number) {
+	// 	this.inner.setProgress(percent, position);
+	// }
 
-	setProgress(percent: number, position: number) {
-		this.inner.setProgress(percent, position);
-	}
-
-	sendProgress(stream: ProgressStream) {
-		this.inner.sendProgress(stream);
-	}
+	// sendProgress(stream: ProgressStream) {
+	// 	this.inner.sendProgress(stream);
+	// }
 }
 
-export class SeriesEntry {
-	inner: Series;
+export class SeriesEntry implements Entry {
+	inner: ApiEntry;
+	data: Series;
+	seasons: Season[];
+	// not the number but the index
 	cSeason: number;
+	// not the number but the index
 	cEpisode: number;
 
 	// series: Series
-	constructor(series: Series) {
-		this.inner = series;
+	constructor(entry: ApiEntry) {
+		this.inner = entry;
+		this.data = entry.data.data as Series;
+		this.seasons = this.data.seasons;
 		this.cSeason = 0;
 		this.cEpisode = 0;
 
@@ -445,118 +540,146 @@ export class SeriesEntry {
 		this.calcCurrentEpisode();
 	}
 
-	calcCurrentEpisode() {
-		const seasons = this.inner.seasons;
-		for (let se = 0; se < seasons.length; se++) {
-			const ep = seasons[se].episodes.findIndex(e => !e.isCompleted());
-			if (ep !== -1) {
-				this.cSeason = se;
+	private calcCurrentEpisode() {
+		this.cSeason = this.seasons.findIndex(s => {
+			const ep = s.episodes.findIndex(e => !e.progress?.isCompleted());
+			if (ep > -1) {
 				this.cEpisode = ep;
-				break;
+				return true;
 			}
-		}
+		});
+		this.cSeason = Math.max(this.cSeason, 0);
 	}
 
-	seasons(): Season[] {
-		return this.inner.seasons;
+	private season(): Season {
+		return this.seasons[this.cSeason];
 	}
 
-	season(): Season {
-		return this.inner.seasons[this.cSeason];
-	}
-
-	episode(): Episode {
-		return this.inner.seasons[this.cSeason].episodes[this.cEpisode];
-	}
-
-	setEpisode(seasonIdx: number, episodeIdx: number) {
-		this.cSeason = seasonIdx;
-		this.cEpisode = episodeIdx;
-	}
-
-	/// returns null or [season, episode]
-	nextEpisode(): [number, number] | null {
-		// check if we can move to next episode (not season)
-		if (this.cEpisode + 1 < this.season().episodes.length)
-			return [this.cSeason, this.cEpisode + 1];
-
-		const nSeason = this.cSeason + 1;
-		if (this.seasons()[nSeason]?.episodes.length > 0)
-			return [this.cSeason + 1, 0];
-
-		return null;
+	private episode(): Episode {
+		return this.season().episodes[this.cEpisode];
 	}
 
 	id(): string {
 		return this.inner.id;
 	}
 
+	kind(): 'Series' {
+		return 'Series';
+	}
+
+	updatedOn(): DateTime {
+		return this.inner.updatedOn;
+	}
+
 	title(): string {
 		return this.inner.name;
 	}
 
-	currentShortTitle(): string {
-		const ep = this.episode();
-		const season = padZero(this.cSeason + 1);
-		const episode = padZero(this.cEpisode + 1);
-		return `S${season}E${episode} ${ep.name}`;
+	progressUpdatedOn(): DateTime | null {
+		return this.episode().progress?.updatedOn ?? null;
 	}
 
-	currentTitle(): string {
-		return `${this.title()} ${this.currentShortTitle()}`;
+	percent(): number {
+		return this.episode().progress?.percent ?? 0;
 	}
 
 	match(val: string): number {
 		return searchScore(val, this.title());
 	}
 
-	// menu
-	// video src
-	// position
-
-	src(): string {
-		return this.inner.src(this.cSeason, this.cEpisode);
+	poster(resolution: PosterResolution = 'small'): string {
+		if (resolution === 'full') {
+			return this.data.fullPosterUrl(this.inner.name);
+		}
+		return this.data.posterUrl(this.inner.name);
 	}
 
-	percent(): number {
-		const l = this.inner.seasons.length;
-		return this.inner.seasons.reduce((t, c) => c.totalPercent() / l + t, 0);
+	activeSrc(): string {
+		return this.data.videoSrc(this.inner.name, this.cSeason, this.cEpisode);
 	}
 
-	currentPercent(): number {
-		return this.inner.percent(this.cSeason, this.cEpisode);
+	activePercent(): number {
+		return this.episode().progress?.percent ?? 0;
 	}
 
-	position(): number {
-		return this.inner.position(this.cSeason, this.cEpisode);
-	}
-
-	creditsPercent(totalLen: number): number {
-		const dur = this.inner.creditsDuration(
-			this.cSeason,
-			this.cEpisode,
-			totalLen,
-		);
-		return dur / totalLen;
-	}
-
-	creditsTime(totalLen: number): number {
-		return (
-			totalLen -
-			this.inner.creditsDuration(this.cSeason, this.cEpisode, totalLen)
-		);
+	creditsPercent(duration: number): number {
+		return this.episode().creditsDuration(duration) / duration;
 	}
 
 	calcPercent(position: number, totalLen: number): number {
 		// 2 minutes
-		return position / this.creditsTime(totalLen);
+		const perc = position / this.creditsTime(totalLen);
+		return Math.max(Math.min(perc, 1), 0);
 	}
 
-	setProgress(percent: number, position: number) {
-		this.inner.setProgress(this.cSeason, this.cEpisode, percent, position);
+	// setEpisode(seasonIdx: number, episodeIdx: number) {
+	// 	this.cSeason = seasonIdx;
+	// 	this.cEpisode = episodeIdx;
+	// }
+
+	// /// returns null or [season, episode]
+	// nextEpisode(): [number, number] | null {
+	// 	// check if we can move to next episode (not season)
+	// 	if (this.cEpisode + 1 < this.season().episodes.length)
+	// 		return [this.cSeason, this.cEpisode + 1];
+
+	// 	const nSeason = this.cSeason + 1;
+	// 	if (this.seasons()[nSeason]?.episodes.length > 0)
+	// 		return [this.cSeason + 1, 0];
+
+	// 	return null;
+	// }
+
+	// currentShortTitle(): string {
+	// 	const ep = this.episode();
+	// 	const season = padZero(this.cSeason + 1);
+	// 	const episode = padZero(this.cEpisode + 1);
+	// 	return `S${season}E${episode} ${ep.name}`;
+	// }
+
+	// currentTitle(): string {
+	// 	return `${this.title()} ${this.currentShortTitle()}`;
+	// }
+
+	// // menu
+	// // video src
+	// // position
+
+	// src(): string {
+	// 	return this.inner.src(this.cSeason, this.cEpisode);
+	// }
+
+	// percent(): number {
+	// 	const l = this.inner.seasons.length;
+	// 	return this.inner.seasons.reduce((t, c) => c.totalPercent() / l + t, 0);
+	// }
+
+	// currentPercent(): number {
+	// 	return this.inner.percent(this.cSeason, this.cEpisode);
+	// }
+
+	// position(): number {
+	// 	return this.inner.position(this.cSeason, this.cEpisode);
+	// }
+
+	// creditsPercent(totalLen: number): number {
+	// 	const dur = this.inner.creditsDuration(
+	// 		this.cSeason,
+	// 		this.cEpisode,
+	// 		totalLen,
+	// 	);
+	// 	return dur / totalLen;
+	// }
+
+	private creditsTime(totalLen: number): number {
+		return totalLen - this.episode().creditsDuration(totalLen);
 	}
 
-	sendProgress(stream: ProgressStream) {
-		this.inner.sendProgress(stream, this.cSeason, this.cEpisode);
-	}
+	// setProgress(percent: number, position: number) {
+	// 	this.inner.setProgress(this.cSeason, this.cEpisode, percent, position);
+	// }
+
+	// sendProgress(stream: ProgressStream) {
+	// 	this.inner.sendProgress(stream, this.cSeason, this.cEpisode);
+	// }
 }

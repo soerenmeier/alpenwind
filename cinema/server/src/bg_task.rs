@@ -61,7 +61,6 @@ async fn task_tick(
 	// add change: Change::Updated or Inserted as needed
 
 	for change in changes {
-		info!("applying change: {:?}", change);
 		apply_change(&cinema, change).await?;
 	}
 

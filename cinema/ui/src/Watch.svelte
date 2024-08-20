@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { padZero } from 'chuchi-utils';
@@ -6,10 +6,10 @@
 	import BackBtn from 'core-lib-ui/BackBtn';
 	import MenuBtn from 'core-lib-ui/MenuBtn';
 
-	import { newProgressStream, bgImg } from './lib/api.ts';
-	import { loadEntry } from './lib/data.ts';
+	import { newProgressStream, bgImg } from './lib/api';
+	import { Entry, loadEntry } from './lib/data';
 	import SeekBar from './ui/seekbar.svelte';
-	import Video from './ui/video.ts';
+	import Video from './ui/video';
 	import SelectOverlay from './ui/selectoverlay.svelte';
 	import { getCore } from 'core-lib';
 
@@ -32,7 +32,7 @@
 
 	/* Vars */
 
-	export let id;
+	export let id: string;
 
 	let showOverlay = true;
 	let showSelectOverlay = false;
@@ -46,7 +46,7 @@
 	}
 
 	/// entry: WatchEntry
-	let entry = null;
+	let entry: Entry = null;
 	let video = new Video();
 	let progress = 0;
 	let credits = 0;
@@ -65,7 +65,7 @@
 
 	async function updateVideo() {
 		const readyProm = video.waitReady();
-		video.setSrc(entry.src(), entry.position());
+		video.setSrc(entry.activeSrc(), entry.activePercent());
 		await readyProm;
 
 		progress = video.progress();
@@ -138,7 +138,8 @@
 
 		const pos = video.position();
 
-		const percent = entry.calcPercent(pos, video.len());
+		// const percent = entry.calcPercent(pos, video.len());
+		const percent = pos / video.len();
 		entry.setProgress(percent, pos);
 		try {
 			entry.sendProgress(progressStream);

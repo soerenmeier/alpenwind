@@ -20,7 +20,7 @@ export function waitOnce<R>(listeners: Listeners<[R]>): Promise<R> {
 export default class Video {
 	el: HTMLVideoElement;
 	waitingOnMetadata: boolean;
-	setPositionOnMetadataLoaded: number;
+	setPercentOnMetadataLoaded: number;
 
 	canplayListeners: Listeners<[Event]>;
 	errorListeners: Listeners<[Event]>;
@@ -29,7 +29,7 @@ export default class Video {
 	constructor() {
 		this.el = document.createElement('video');
 		this.waitingOnMetadata = true;
-		this.setPositionOnMetadataLoaded = 0;
+		this.setPercentOnMetadataLoaded = 0;
 
 		this.canplayListeners = new Listeners();
 		this.errorListeners = new Listeners();
@@ -41,7 +41,8 @@ export default class Video {
 
 		this.el.addEventListener('loadedmetadata', e => {
 			this.waitingOnMetadata = false;
-			this.el.currentTime = this.setPositionOnMetadataLoaded;
+			this.el.currentTime =
+				this.setPercentOnMetadataLoaded * this.el.duration;
 		});
 		this.el.addEventListener('canplay', e => {
 			this.canplayListeners.trigger(e);
@@ -82,10 +83,10 @@ export default class Video {
 			throw new Error('canplay was not triggered');
 	}
 
-	setSrc(src: string, newPosition: number) {
+	setSrc(src: string, newPercent: number) {
 		// the same source, let's just update the position
 		if (this.el.src === src) {
-			this.el.currentTime = newPosition;
+			this.el.currentTime = newPercent * this.el.duration;
 			return;
 		}
 
@@ -97,7 +98,7 @@ export default class Video {
 		this.waitingOnMetadata = true;
 		// this might not be necessary but i'm on the safe side
 		// the problem is this might triggered a timeupdate
-		this.setPositionOnMetadataLoaded = newPosition;
+		this.setPercentOnMetadataLoaded = newPercent;
 	}
 
 	position() {
