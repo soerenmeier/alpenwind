@@ -61,10 +61,21 @@ CREATE TABLE cinema_entry_genres (
 CREATE TABLE cinema_progress (
     entry_id TEXT REFERENCES cinema_entries(id),
     episode_id TEXT REFERENCES cinema_episodes(id),
+    linked_id TEXT GENERATED ALWAYS AS (
+        CASE
+            WHEN entry_id IS NOT NULL THEN 'e' || entry_id
+            WHEN episode_id IS NOT NULL THEN 's' || episode_id
+            ELSE NULL
+        END
+    ) STORED,
     user_id TEXT NOT NULL,
     progress REAL NOT NULL,
     created_on TIMESTAMP NOT NULL,
     updated_on TIMESTAMP NOT NULL,
     last_watch TIMESTAMP,
-    PRIMARY KEY (entry_id, episode_id, user_id)
+    CHECK (
+        (entry_id IS NOT NULL AND episode_id IS NULL) OR
+        (entry_id IS NULL AND episode_id IS NOT NULL)
+    ),
+    PRIMARY KEY (user_id, linked_id)
 );

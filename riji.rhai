@@ -154,3 +154,12 @@ fn build_docker() {
 	]);
 	save.execute();
 }
+
+// only for testing?
+// open a shell
+fn run_docker() {
+	let run = cmd([
+		"docker", "run", "-it", "alpenwind"
+	]);
+	run.execute();
+}

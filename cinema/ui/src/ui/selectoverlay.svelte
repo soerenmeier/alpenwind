@@ -1,16 +1,26 @@
-<script>
+<script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import { slide as svelteSlide } from 'svelte/transition';
 	import { cubicInOut } from 'svelte/easing';
 	import CloseBtn from 'core-lib-ui/CloseBtn';
 	import { getCore } from 'core-lib';
+	import { SeriesEntry } from '../lib/data';
+	import { Episode, Season } from '../lib/api';
+	import { padZero } from 'chuchi-utils';
 
 	/* consts */
 	const dispatch = createEventDispatcher();
 	const { contextMenu } = getCore();
 	// const openCtx = cl.contextMenu.open;
 
-	function backgroundColor(node, params) {
+	function backgroundColor(
+		node: HTMLElement,
+		params?: {
+			delay?: number;
+			duration?: number;
+			easing?: (t: number) => number;
+		},
+	) {
 		return {
 			delay: params.delay ?? 0,
 			duration: params.duration ?? 400,
@@ -19,7 +29,14 @@
 		};
 	}
 
-	function slide(node, params) {
+	function slide(
+		node: HTMLElement,
+		params?: {
+			delay?: number;
+			duration?: number;
+			easing?: (t: number) => number;
+		},
+	) {
 		return {
 			delay: params.delay ?? 0,
 			duration: params.duration ?? 400,
@@ -30,9 +47,9 @@
 
 	/* Vars */
 	// should always contain an entry which is a series
-	export let entry;
+	export let entry: SeriesEntry;
 
-	let openSeason = entry.data.cSeason;
+	let openSeason = entry.cSeason;
 
 	/// Event handlers
 	let sovCont;
@@ -46,22 +63,26 @@
 		dispatch('close');
 	}
 
-	function onSelectEpisode(seasonIdx, episodeIdx) {
-		dispatch('selectEpisode', { seasonIdx, episodeIdx });
+	function onSelectEpisode(episodeId: string) {
+		dispatch('selectEpisode', episodeId);
 	}
 
 	/// episode might be null
-	function setCompleted(seasonIdx, episodeIdx, completed) {
+	function setCompleted(
+		seasonIdx: number,
+		episodeId?: string,
+		completed: boolean = true,
+	) {
 		dispatch('setCompleted', {
 			season: seasonIdx,
-			episode: episodeIdx,
+			episode: episodeId,
 			completed,
 		});
 		entry = entry;
 	}
 
 	/// episode might be null
-	function ctxMenu(e, seasonIdx, episodeIdx) {
+	function ctxMenu(e, seasonIdx: number, episodeId?: string) {
 		e.preventDefault();
 		e.stopPropagation();
 
@@ -72,15 +93,29 @@
 				{ id: 'setCompleted', text: 'Scho gluegt' },
 			],
 			id => {
-				if (id === 'reset') setCompleted(seasonIdx, episodeIdx, false);
+				if (id === 'reset') setCompleted(seasonIdx, episodeId, false);
 				else if (id === 'setCompleted')
-					setCompleted(seasonIdx, episodeIdx, true);
+					setCompleted(seasonIdx, episodeId, true);
 				// else if (id === '')
 			},
 		);
 	}
+
+	function seasonTitle(season: Season): string {
+		return (
+			'Season ' +
+			padZero(season.season) +
+			(season.name ? ' ' + season.name : '')
+		);
+	}
+
+	function episodeTitle(episode: Episode): string {
+		return padZero(episode.episode) + ' - ' + episode.name;
+	}
 </script>
 
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+<!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
 	class="select-overlay abs-full"
 	transition:backgroundColor
@@ -94,7 +129,7 @@
 			<h2>Episode uswähle</h2>
 
 			<div class="list">
-				{#each entry.data.seasons() as season, idx}
+				{#each entry.seasons as season, idx}
 					<div class="season">
 						<span
 							class="entry"
@@ -104,7 +139,7 @@
 							}}
 							on:contextmenu={e => ctxMenu(e, idx, null)}
 						>
-							<span>{season.title(idx)}</span>
+							<span>{seasonTitle(season)}</span>
 						</span>
 
 						{#if openSeason === idx}
@@ -112,17 +147,17 @@
 								class="season-list"
 								transition:svelteSlide={{ duration: 200 }}
 							>
-								{#each season.episodes as episode, eId}
+								{#each season.episodes as episode}
 									<span
 										class="entry"
 										style="--progress: {episode.percent() *
 											100}%"
 										on:click={() =>
-											onSelectEpisode(idx, eId)}
+											onSelectEpisode(episode.id)}
 										on:contextmenu={e =>
-											ctxMenu(e, idx, eId)}
+											ctxMenu(e, idx, episode.id)}
 									>
-										<span>{episode.title(eId)}</span>
+										<span>{episodeTitle(episode)}</span>
 									</span>
 								{/each}
 							</div>

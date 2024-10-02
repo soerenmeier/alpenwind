@@ -94,6 +94,8 @@ pub async fn progress(
 				last_watch: None,
 			});
 
+		eprintln!("got progress {prog:?}");
+
 		// todo do we wan't it like this?
 		if msg.percent > 0.9999 {
 			prog.last_watch = Some(DateTime::now());

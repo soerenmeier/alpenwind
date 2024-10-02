@@ -1,4 +1,4 @@
-import { padZero, sortToHigher, sortToLower } from 'chuchi-utils';
+import { padZero, range, sortToHigher, sortToLower } from 'chuchi-utils';
 import {
 	entries as entriesApi,
 	MIN_PERCENT,
@@ -10,6 +10,7 @@ import {
 	Season,
 	Episode,
 	EntriesResp,
+	ProgressId,
 } from './api.js';
 import DateTime from 'chuchi-legacy/time/DateTime';
 import { searchScore } from 'chuchi-utils/search';
@@ -275,6 +276,8 @@ export interface Entry {
 
 	poster(resolution?: PosterResolution): string;
 
+	progressId(): ProgressId;
+
 	// the source of the current active video
 	activeSrc(): string;
 
@@ -284,7 +287,7 @@ export interface Entry {
 
 	// calcPercent(position: number, duration: number): number;
 
-	setProgress(percent: number);
+	setProgress(percent: number): void;
 }
 
 function newEntry(entry: ApiEntry): Entry {
@@ -451,6 +454,13 @@ export class MovieEntry implements Entry {
 		return this.data.posterUrl(this.inner.name);
 	}
 
+	progressId(): ProgressId {
+		return {
+			kind: 'Movie',
+			id: this.id(),
+		};
+	}
+
 	activeSrc(): string {
 		return this.data.videoSrc(this.inner.name);
 	}
@@ -510,9 +520,9 @@ export class MovieEntry implements Entry {
 	// 	return position / this.creditsTime(totalLen);
 	// }
 
-	// setProgress(percent: number, position: number) {
-	// 	this.inner.setProgress(percent, position);
-	// }
+	setProgress(percent: number) {
+		this.data.setProgress(percent);
+	}
 
 	// sendProgress(stream: ProgressStream) {
 	// 	this.inner.sendProgress(stream);
@@ -551,11 +561,11 @@ export class SeriesEntry implements Entry {
 		this.cSeason = Math.max(this.cSeason, 0);
 	}
 
-	private season(): Season {
+	season(): Season {
 		return this.seasons[this.cSeason];
 	}
 
-	private episode(): Episode {
+	episode(): Episode {
 		return this.season().episodes[this.cEpisode];
 	}
 
@@ -579,8 +589,10 @@ export class SeriesEntry implements Entry {
 		return this.episode().progress?.updatedOn ?? null;
 	}
 
+	// seasonPercent(season: episode)
+
 	percent(): number {
-		return this.episode().progress?.percent ?? 0;
+		return this.episode().percent();
 	}
 
 	match(val: string): number {
@@ -594,6 +606,13 @@ export class SeriesEntry implements Entry {
 		return this.data.posterUrl(this.inner.name);
 	}
 
+	progressId(): ProgressId {
+		return {
+			kind: 'Episode',
+			id: this.episode().id,
+		};
+	}
+
 	activeSrc(): string {
 		return this.data.videoSrc(this.inner.name, this.cSeason, this.cEpisode);
 	}
@@ -602,6 +621,7 @@ export class SeriesEntry implements Entry {
 		return this.episode().progress?.percent ?? 0;
 	}
 
+	// todo do we wan't credits percent and not duration?
 	creditsPercent(duration: number): number {
 		return this.episode().creditsDuration(duration) / duration;
 	}
@@ -617,14 +637,14 @@ export class SeriesEntry implements Entry {
 	// 	this.cEpisode = episodeIdx;
 	// }
 
-	// /// returns null or [season, episode]
+	/// returns null or [seasonIdx, episodeIdx]
 	// nextEpisode(): [number, number] | null {
 	// 	// check if we can move to next episode (not season)
 	// 	if (this.cEpisode + 1 < this.season().episodes.length)
 	// 		return [this.cSeason, this.cEpisode + 1];
 
 	// 	const nSeason = this.cSeason + 1;
-	// 	if (this.seasons()[nSeason]?.episodes.length > 0)
+	// 	if (this.seasons[nSeason]?.episodes.length > 0)
 	// 		return [this.cSeason + 1, 0];
 
 	// 	return null;
@@ -675,11 +695,61 @@ export class SeriesEntry implements Entry {
 		return totalLen - this.episode().creditsDuration(totalLen);
 	}
 
-	// setProgress(percent: number, position: number) {
-	// 	this.inner.setProgress(this.cSeason, this.cEpisode, percent, position);
-	// }
+	setProgress(percent: number) {
+		this.episode().setProgress(percent);
+	}
 
-	// sendProgress(stream: ProgressStream) {
-	// 	this.inner.sendProgress(stream, this.cSeason, this.cEpisode);
-	// }
+	setProgressOnEpisode(
+		seasonIdx: number,
+		episodeId: string | null,
+		percent: number,
+	): [ProgressId, number][] {
+		const season = this.seasons[seasonIdx];
+
+		let episodes: number[] = [];
+		if (typeof episodeId === 'string') {
+			episodes = [season.episodes.findIndex(e => e.id === episodeId)];
+		} else {
+			episodes = range(0, season.episodes.length);
+		}
+
+		return episodes.map(idx => {
+			const episode = season.episodes[idx];
+			episode.setProgress(percent);
+
+			return [{ kind: 'Episode', id: episode.id }, percent];
+		});
+	}
+
+	setEpisode(episodeId: string) {
+		const found = this.seasons
+			.map((s, i) => {
+				const idx = s.episodes.findIndex(e => e.id === episodeId);
+				return idx > -1 ? [i, idx] : null;
+			})
+			.find(e => e !== null);
+
+		if (!found) throw new Error('could not find episode ' + episodeId);
+
+		this.cSeason = found[0];
+		this.cEpisode = found[1];
+	}
+
+	// returns true if the episode was updated
+	nextEpisode(): boolean {
+		// check if we can move to next episode (not season)
+		if (this.cEpisode + 1 < this.season().episodes.length) {
+			this.cEpisode++;
+			return true;
+		}
+
+		const nSeason = this.cSeason + 1;
+		if (this.seasons[nSeason]?.episodes.length > 0) {
+			this.cSeason++;
+			this.cEpisode = 0;
+			return true;
+		}
+
+		return false;
+	}
 }

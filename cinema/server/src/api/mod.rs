@@ -38,6 +38,7 @@ pub struct ProgressReq {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "id")]
 pub enum ProgressId {
 	Movie(UniqueId),
 	Episode(UniqueId),
@@ -47,7 +48,6 @@ pub enum ProgressId {
 pub struct ProgressMsg {
 	pub id: ProgressId,
 	pub percent: f32,
-	pub position: f32,
 }
 
 // stream is on /api/cinema/stream

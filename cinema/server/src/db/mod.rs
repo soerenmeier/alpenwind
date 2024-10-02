@@ -271,6 +271,19 @@ fn into_data(
 		}
 	}
 
+	// now sort seasons and episodes
+	for entry in entries.values_mut() {
+		match &mut entry.data {
+			data::EntryData::Series(series) => {
+				series.seasons.sort_by(|a, b| a.season.cmp(&b.season));
+				for season in series.seasons.iter_mut() {
+					season.episodes.sort_by(|a, b| a.episode.cmp(&b.episode));
+				}
+			}
+			_ => {}
+		}
+	}
+
 	for entry_genre in entry_genres {
 		let entry = entries.get_mut(&entry_genre.entry_id).unwrap();
 		entry.genres.push(entry_genre.genre_id);
@@ -296,9 +309,9 @@ impl CinemaDbWithConn<'_> {
 		user_id: &UniqueId,
 	) -> Result<HashMap<UniqueId, data::Entry>> {
 		let (entries, seasons, episodes, entry_genres, progress) = tokio::try_join!(
-			self.entries.select::<Entry>(filter!()),
+			self.entries.select::<Entry>(filter!()), // include progress
 			self.seasons.select::<Season>(filter!()),
-			self.episodes.select::<Episode>(filter!()),
+			self.episodes.select::<Episode>(filter!()), // include progress
 			self.entry_genres.select::<EntryGenre>(filter!()),
 			self.progress.select::<Progress>(filter!(user_id))
 		)?;
@@ -352,7 +365,7 @@ impl CinemaDbWithConn<'_> {
 		#[derive(Debug, FromRow)]
 		struct EntryType {
 			id: UniqueId,
-			kind: i8,
+			kind: i16,
 		}
 
 		let entry = self.entries.select_opt::<EntryType>(filter!(id)).await?;
@@ -389,12 +402,14 @@ impl CinemaDbWithConn<'_> {
 		sql.push_str(") VALUES (");
 		progress.insert_values(&mut sql);
 		sql.push_str(
-			") ON CONFLICT (\"entry_id\", \"episode_id\", \"user_id\") DO UPDATE SET \
-				\"percent\" = excluded.percent,\
+			") ON CONFLICT (\"linked_id\", \"user_id\") DO UPDATE SET \
+				\"progress\" = excluded.progress,\
 				\"updated_on\" = excluded.updated_on,\
 				\"last_watch\" = excluded.last_watch\
 			",
 		);
+
+		eprintln!("sql {:?} params {:?}", sql, progress);
 
 		let stmt = conn.prepare_cached(&sql).await?;
 

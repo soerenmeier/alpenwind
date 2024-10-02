@@ -57,7 +57,7 @@ struct CinemaConf {
 init_fn!(init, "cinema", assets::JS, assets::CSS);
 async fn init(core: Core) {
 	tracing_subscriber::fmt()
-		.with_env_filter("cinema_server=info,chuchi=info,warn")
+		.with_env_filter("cinema_server=info,chuchi=info,postgres=debug,tokio_postgres=debug,info")
 		.init();
 
 	let cfg: Config = core.parse_config().expect("failed to read config");

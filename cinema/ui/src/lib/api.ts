@@ -120,13 +120,9 @@ export class Movie {
 	// 	return this.progress?.position ?? 0;
 	// }
 
-	// setProgress(percent: number, position: number) {
-	// 	this.progress = new Progress({
-	// 		percent,
-	// 		position,
-	// 		updatedOn: new DateTime(),
-	// 	});
-	// }
+	setProgress(percent: number) {
+		this.progress = Progress.new(percent);
+	}
 
 	// sendProgress(stream: ProgressStream) {
 	// 	const percent = this.progress?.percent ?? 0;
@@ -243,6 +239,14 @@ export class Progress {
 		this.updatedOn = new DateTime(d.updatedOn);
 	}
 
+	static new(percent: number): Progress {
+		const prog = Object.create(Progress.prototype);
+		prog.percent = percent;
+		prog.updatedOn = new DateTime();
+
+		return prog;
+	}
+
 	isCompleted(): boolean {
 		return this.percent > MAX_PERCENT;
 	}
@@ -261,15 +265,21 @@ export class Season {
 		this.episodes = d.episodes.map((e: any) => new Episode(e));
 	}
 
+	// title(): string {}
+
 	folderName(): string {
 		let name = this.name ? ' ' + this.name : '';
 		return 'Season ' + padZero(this.season) + name;
 	}
 
-	// totalPercent(): number {
-	// 	const l = this.episodes.length;
-	// 	return this.episodes.reduce((t, ep) => ep.percent() / l + t, 0);
-	// }
+	totalPercent(): number {
+		const l = this.episodes.length;
+		return this.episodes.reduce((t, ep) => ep.percent() / l + t, 0);
+	}
+
+	episodeById(id: string): Episode | undefined {
+		return this.episodes.find(ep => ep.id === id);
+	}
 }
 
 export class Episode {
@@ -310,17 +320,13 @@ export class Episode {
 	// 	return this.progress?.updatedOn ?? null;
 	// }
 
-	// percent(): number {
-	// 	return this.progress?.percent ?? 0;
-	// }
+	percent(): number {
+		return this.progress?.percent ?? 0;
+	}
 
-	// setProgress(percent: number, position: number) {
-	// 	this.progress = new Progress({
-	// 		percent,
-	// 		position,
-	// 		updatedOn: new DateTime(),
-	// 	});
-	// }
+	setProgress(percent: number) {
+		this.progress = Progress.new(percent);
+	}
 }
 
 export class EntriesResp {
@@ -343,6 +349,11 @@ export async function entries(token: string): Promise<EntriesResp> {
 	return new EntriesResp(d);
 }
 
+export type ProgressId = {
+	kind: 'Movie' | 'Episode';
+	id: string;
+};
+
 export class ProgressStream {
 	sender: Sender;
 
@@ -354,6 +365,10 @@ export class ProgressStream {
 		if (!stream.isConnect()) stream.connect();
 
 		await this.sender.open({ token });
+	}
+
+	send(id: ProgressId, percent: number) {
+		this.sender.send({ id, percent });
 	}
 
 	// sendMovie(id: string, percent: number, position: number) {
