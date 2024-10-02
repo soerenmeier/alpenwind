@@ -1,9 +1,10 @@
-<script>
-	import { loadEntries } from './lib/data.ts';
+<script lang="ts">
+	import { loadEntries, DashboardEntries, Entry } from './lib/data';
 	import Cover from './ui/cover.svelte';
 	import { getCore } from 'core-lib';
 	import BackBtn from 'core-lib-ui/BackBtn';
 	import Search from 'core-lib-ui/Search';
+	import { tick } from 'svelte';
 
 	let searchValue = '';
 	export { searchValue as search };
@@ -14,9 +15,9 @@
 
 	let contEl = null;
 
-	let entries = null;
-	let searchEntries = null;
-	const groups = [
+	let entries: DashboardEntries = null;
+	let searchEntries: Entry[] = null;
+	const groups: [string, boolean, string][] = [
 		['watchLater', false, 'Später aluege'],
 		['newest', true, 'Neu hinzuegfüegt'],
 		['series', true, 'Serien'],
@@ -174,7 +175,7 @@
 
 				<div class="hero-entry">
 					<Cover
-						src={lastWatched.fullPoster()}
+						src={lastWatched.poster('full')}
 						alt={lastWatched.title()}
 						percent={lastWatched.percent()}
 						on:click={() =>
@@ -199,8 +200,8 @@
 
 		{#each groups as [group, filterAble, groupTitle]}
 			{@const list = filterAble
-				? entries[group].slice(0, 6)
-				: entries[group]}
+				? entries.getByGroup(group).slice(0, 6)
+				: entries.getByGroup(group)}
 			{#if list.length > 0}
 				<section>
 					<h2>{groupTitle}</h2>

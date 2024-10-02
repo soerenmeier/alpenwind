@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { padZero } from 'chuchi-utils';
@@ -6,10 +6,10 @@
 	import BackBtn from 'core-lib-ui/BackBtn';
 	import MenuBtn from 'core-lib-ui/MenuBtn';
 
-	import { newProgressStream, bgImg } from './lib/api.ts';
-	import { loadEntry } from './lib/data.ts';
+	import { newProgressStream, bgImg } from './lib/api';
+	import { Entry, loadEntry, SeriesEntry } from './lib/data';
 	import SeekBar from './ui/seekbar.svelte';
-	import Video from './ui/video.ts';
+	import Video from './ui/video';
 	import SelectOverlay from './ui/selectoverlay.svelte';
 	import { getCore } from 'core-lib';
 
@@ -32,7 +32,7 @@
 
 	/* Vars */
 
-	export let id;
+	export let id: string;
 
 	let showOverlay = true;
 	let showSelectOverlay = false;
@@ -46,7 +46,7 @@
 	}
 
 	/// entry: WatchEntry
-	let entry = null;
+	let entry: Entry = null;
 	let video = new Video();
 	let progress = 0;
 	let credits = 0;
@@ -63,9 +63,31 @@
 	}
 	load();
 
+	function isSeries(entry: Entry): entry is SeriesEntry {
+		return entry.kind() === 'Series';
+	}
+
+	function shortTitle(entry: Entry) {
+		if (!isSeries(entry)) return entry.title();
+
+		const season = entry.season();
+		const episode = entry.episode();
+
+		return `S${padZero(season.season)}E${padZero(episode.episode)} ${episode.name}`;
+	}
+
+	function title(entry: Entry) {
+		if (!isSeries(entry)) return entry.title();
+
+		const season = entry.season();
+		const episode = entry.episode();
+
+		return `${entry.title()} S${padZero(season.season)}E${padZero(episode.episode)} ${episode.name}`;
+	}
+
 	async function updateVideo() {
 		const readyProm = video.waitReady();
-		video.setSrc(entry.src(), entry.position());
+		video.setSrc(entry.activeSrc(), entry.activePercent());
 		await readyProm;
 
 		progress = video.progress();
@@ -138,38 +160,49 @@
 
 		const pos = video.position();
 
-		const percent = entry.calcPercent(pos, video.len());
-		entry.setProgress(percent, pos);
+		// const percent = entry.calcPercent(pos, video.len());
+		const percent = pos / video.len();
+		entry.setProgress(percent);
 		try {
-			entry.sendProgress(progressStream);
+			progressStream.send(entry.progressId(), entry.percent());
 		} catch (e) {
 			showSendError(e);
 			throw e;
 		}
 
 		// let's skip the credits (only for series)
-		if (entry.kind !== 'Series' || skippedCredits || !video.isPlaying())
-			return;
+		if (!isSeries(entry) || skippedCredits || !video.isPlaying()) return;
 
-		const creditsTime = entry.creditsTime(video.len());
+		const creditsTime =
+			video.len() - entry.creditsPercent(video.len()) * video.len();
 		const inCreditsSkipZone = creditsTime < pos && pos < creditsTime + 1;
 		const atTheEnd = video.len() - 1 < pos;
 
+		// gonna skip if in credits skip zone or at the end
 		if (!inCreditsSkipZone && !atTheEnd) return;
 
 		skippedCredits = true;
 
-		// let's try to skip
-		const next = entry.data.nextEpisode();
-		if (!next) return;
+		const progId = entry.progressId();
 
-		entry.data.setEpisode(next[0], next[1]);
-		entry = entry;
+		const switched = entry.nextEpisode();
+		// skippedCredits might "deadlock" but this a rare occurence
+		// and might be difficult to fix
+		// todo
+		if (!switched) return;
 
 		await updateVideo();
 		play();
 
 		skippedCredits = false;
+
+		// now update the progress of the previous
+		try {
+			progressStream.send(progId, 1);
+		} catch (e) {
+			showSendError(e);
+			throw e;
+		}
 	}
 
 	function onVideoClick(e) {
@@ -192,8 +225,11 @@
 	}
 
 	async function onSelectEpisode(e) {
-		const { seasonIdx, episodeIdx } = e.detail;
-		entry.data.setEpisode(seasonIdx, episodeIdx);
+		// typeguard typescript entry is SeriesEntry
+		if (!(entry instanceof SeriesEntry))
+			throw new Error('entry is not a SeriesEntry');
+
+		entry.setEpisode(e.detail);
 		entry = entry;
 
 		await updateVideo();
@@ -263,22 +299,17 @@
 		// episode might be null
 		const { season, episode, completed } = ev.detail;
 
-		// this can only be called on a series
-		const series = entry.data.inner;
-		let episodes = [episode];
+		if (!isSeries(entry)) throw new Error('entry is not a SeriesEntry');
 
-		if (episode === null)
-			episodes = series.seasons[season].episodes.map((a, i) => i);
-
-		let percent = completed ? 1 : 0;
-		// 4hours
-		let position = completed ? 14400 : 0;
+		const progressIds = entry.setProgressOnEpisode(
+			season,
+			episode,
+			completed ? 1 : 0,
+		);
 
 		try {
-			episodes.forEach(ep => {
-				// position:
-				series.setProgress(season, ep, percent, position);
-				series.sendProgress(progressStream, season, ep);
+			progressIds.forEach(([id, percent]) => {
+				progressStream.send(id, percent);
 			});
 		} catch (e) {
 			showSendError(e);
@@ -303,9 +334,13 @@
 
 <div id="watch" class="abs-full" class:hide-mouse={hideMouse} transition:fade>
 	{#if entry}
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<!-- svelte-ignore a11y-click-events-have-key-events -->
 		<div class="video abs-full" use:bindVideo on:click={onVideoClick}></div>
 
 		{#if showOverlay}
+			<!-- svelte-ignore a11y-no-static-element-interactions -->
+			<!-- svelte-ignore a11y-click-events-have-key-events -->
 			<div
 				class="overlay abs-full"
 				bind:this={ovCont}
@@ -317,12 +352,12 @@
 
 					<h1>
 						<span class="short-title">
-							{entry.currentShortTitle()}
+							{shortTitle(entry)}
 						</span>
-						<span class="title">{entry.currentTitle()}</span>
+						<span class="title">{title(entry)}</span>
 					</h1>
 
-					{#if entry.kind === 'Series'}
+					{#if entry.kind() === 'Series'}
 						<MenuBtn on:click={onMenuClick} />
 					{/if}
 				</header>
@@ -350,7 +385,7 @@
 			</div>
 		{/if}
 
-		{#if showSelectOverlay && entry.kind === 'Series'}
+		{#if showSelectOverlay && entry.kind() === 'Series'}
 			<SelectOverlay
 				{entry}
 				on:close={() => (showSelectOverlay = false)}
