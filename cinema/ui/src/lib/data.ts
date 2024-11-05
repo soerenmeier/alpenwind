@@ -438,7 +438,14 @@ export class SeriesEntry implements Entry {
 	}
 
 	percent(): number {
-		return this.episode().percent();
+		// todo probably better calc the total percent
+		return (
+			this.seasons.reduce((acc, s) => {
+				return acc + s.totalPercent();
+			}, 0) / this.seasons.length
+		);
+
+		// return this.episode().percent();
 	}
 
 	match(val: string): number {

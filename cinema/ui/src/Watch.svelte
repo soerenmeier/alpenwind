@@ -164,7 +164,7 @@
 		const percent = pos / video.len();
 		entry.setProgress(percent);
 		try {
-			progressStream.send(entry.progressId(), entry.percent());
+			progressStream.send(entry.progressId(), entry.activePercent());
 		} catch (e) {
 			showSendError(e);
 			throw e;
