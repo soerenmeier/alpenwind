@@ -38,11 +38,9 @@
 		await Promise.all([loadSession(), loadApps(cl)]);
 
 		cl.router.onRoute(async (req, route, routing) => {
-			destroyComp();
-
 			if (!session.get()) {
 				await routing.dataReady();
-
+				destroyComp();
 				const login = new SvelteComponent(Login);
 				destroyComp = login.attach(cont, {}, allContext);
 
@@ -52,6 +50,7 @@
 
 			if (!route) {
 				await routing.dataReady();
+				destroyComp();
 				cont.innerText = 'not found';
 				routing.domReady();
 				return;
@@ -59,6 +58,7 @@
 
 			const comp = await route.load(req);
 			await routing.dataReady();
+			destroyComp();
 			destroyComp = comp.attach(cont, route.toProps(req), allContext);
 			routing.domReady();
 		});
