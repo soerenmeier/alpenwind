@@ -184,12 +184,6 @@ export class DashboardEntries {
 		return this[group];
 	}
 
-	_replaceLastWatched(entry: Entry) {
-		let prev = this.lastWatched;
-		this.lastWatched = entry;
-		return prev;
-	}
-
 	_splitEntries(list: Entry[]) {
 		let lastWatchedTime = null;
 		list.forEach(entry => {
@@ -200,8 +194,7 @@ export class DashboardEntries {
 				(!lastWatchedTime || lastWatchedTime.time < updatedOn.time)
 			) {
 				lastWatchedTime = updatedOn;
-				entry = this._replaceLastWatched(entry);
-				if (!entry) return;
+				this.lastWatched = entry;
 			}
 
 			// categories to other categories
@@ -229,6 +222,13 @@ export class DashboardEntries {
 					break;
 			}
 		});
+
+		// remove the lastWatched from the watchLater list
+		if (this.lastWatched) {
+			this.watchLater = this.watchLater.filter(
+				e => e.id() !== this.lastWatched?.id(),
+			);
+		}
 	}
 
 	_sort() {
