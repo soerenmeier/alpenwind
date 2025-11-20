@@ -67,6 +67,7 @@ pub struct Series {
 pub struct Season {
 	// if change Inserted, this means an id was newly generated
 	pub id: UniqueId,
+	// should start at 1
 	pub season: u16,
 	pub name: Option<String>,
 	pub original_name: Option<String>,
@@ -81,6 +82,7 @@ pub struct Season {
 pub struct Episode {
 	// if change Inserted, this means an id was newly generated
 	pub id: UniqueId,
+	// should start at 1
 	pub episode: u16,
 	pub name: String,
 	pub original_name: Option<String>,

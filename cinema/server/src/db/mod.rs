@@ -2,6 +2,9 @@ use crate::data::Change;
 
 use super::data;
 
+pub mod migrate;
+pub mod old;
+
 use std::collections::HashMap;
 
 use chuchi::Resource;

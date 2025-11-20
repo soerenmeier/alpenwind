@@ -52,6 +52,9 @@ struct CinemaConf {
 	//
 	#[serde(rename = "allow-deletes", default)]
 	allow_deletes: bool,
+
+	#[serde(rename = "run-migration", default)]
+	run_migration: bool,
 }
 
 init_fn!(init, "cinema", assets::JS, assets::CSS);
@@ -77,6 +80,11 @@ async fn init(core: Core) {
 
 	let users = Users::new(&db, core.sessions).await;
 	let cinema = CinemaDb::new(&db).await;
+
+	if cfg.cinema.run_migration {
+		let old_cinema = db::old::CinemaDb::new(&db).await;
+		db::migrate::run_migration(&old_cinema, &cinema, &db).await;
+	}
 
 	let mut server = core_lib::chuchi::build().await;
 	let mut stream_server = StreamServer::new("/api/cinema/stream");
