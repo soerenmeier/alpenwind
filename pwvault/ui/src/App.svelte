@@ -52,6 +52,7 @@
 			.sort(([aScore, ap], [bScore, bp]) => sortToHigher(aScore, bScore))
 			.map(([score, p]) => p);
 	}
+	$: filteredPasswords = filterPasswords(passwords, searchVal);
 
 	async function requestMasterPw() {
 		showMasterPwOverlay = true;
@@ -64,6 +65,30 @@
 				res(pw);
 			});
 		});
+	}
+
+	function improveSearchField(el) {
+		// not sure if some of these changes should go to the search
+		// component
+
+		// lets first focus
+		const input = el.querySelector('input');
+		input.focus();
+
+		const onKeyDown = e => {
+			if (e.key !== 'Enter') return;
+			if (filteredPasswords.length !== 1) return;
+
+			onPasswordClick(filteredPasswords[0]);
+		};
+
+		input.addEventListener('keydown', onKeyDown);
+
+		return {
+			destroy: () => {
+				input.removeEventListener('keydown', onKeyDown);
+			},
+		};
 	}
 
 	/* Events */
@@ -153,13 +178,23 @@
 			},
 		);
 	}
+
+	function onKeyDown(e) {
+		if (e.key !== 'Escape') return;
+
+		if (showMasterPwOverlay) masterPwListeners.trigger(null);
+
+		if (showAddOverlay) onAddClose();
+	}
 </script>
+
+<svelte:window on:keydown={onKeyDown} />
 
 <div id="vault" class="abs-full">
 	<header>
 		<BackBtn href="/" />
 
-		<div class="center">
+		<div class="center" use:improveSearchField>
 			<Search bind:value={searchVal} />
 		</div>
 
@@ -167,7 +202,7 @@
 	</header>
 
 	<div class="list">
-		{#each filterPasswords(passwords, searchVal) as password}
+		{#each filteredPasswords as password}
 			<PasswordComp
 				{password}
 				on:click={() => onPasswordClick(password)}
