@@ -18,7 +18,7 @@ CREATE INDEX idx_cinema_entries_tmdb_id ON cinema_entries (tmdb_id);
 
 CREATE TABLE cinema_seasons (
     id TEXT PRIMARY KEY,
-    entry_id TEXT NOT NULL REFERENCES cinema_entries(id),
+    entry_id TEXT NOT NULL REFERENCES cinema_entries(id) ON DELETE CASCADE,
     season SMALLINT NOT NULL,
     name TEXT,
     original_name TEXT,
@@ -28,7 +28,7 @@ CREATE TABLE cinema_seasons (
 
 CREATE TABLE cinema_episodes (
     id TEXT PRIMARY KEY,
-    season_id TEXT NOT NULL REFERENCES cinema_seasons(id),
+    season_id TEXT NOT NULL REFERENCES cinema_seasons(id) ON DELETE CASCADE,
     episode SMALLINT NOT NULL,
     name TEXT NOT NULL,
     original_name TEXT,
@@ -41,8 +41,8 @@ CREATE TABLE cinema_episodes (
 
 CREATE TABLE cinema_media_files (
     id TEXT PRIMARY KEY,
-    entry_id TEXT REFERENCES cinema_entries(id),
-    episode_id TEXT REFERENCES cinema_episodes(id),
+    entry_id TEXT REFERENCES cinema_entries(id) ON DELETE CASCADE,
+    episode_id TEXT REFERENCES cinema_episodes(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     size INTEGER NOT NULL,
     width SMALLINT,
@@ -53,14 +53,14 @@ CREATE TABLE cinema_media_files (
 );
 
 CREATE TABLE cinema_entry_genres (
-    entry_id TEXT NOT NULL REFERENCES cinema_entries(id),
+    entry_id TEXT NOT NULL REFERENCES cinema_entries(id) ON DELETE CASCADE,
     genre_id INTEGER NOT NULL,
     PRIMARY KEY (entry_id, genre_id)
 );
 
 CREATE TABLE cinema_progress (
-    entry_id TEXT REFERENCES cinema_entries(id),
-    episode_id TEXT REFERENCES cinema_episodes(id),
+    entry_id TEXT REFERENCES cinema_entries(id) ON DELETE CASCADE,
+    episode_id TEXT REFERENCES cinema_episodes(id) ON DELETE CASCADE,
     linked_id TEXT GENERATED ALWAYS AS (
         CASE
             WHEN entry_id IS NOT NULL THEN 'e' || entry_id

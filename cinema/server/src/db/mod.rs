@@ -412,8 +412,6 @@ impl CinemaDbWithConn<'_> {
 			",
 		);
 
-		eprintln!("sql {:?} params {:?}", sql, progress);
-
 		let stmt = conn.prepare_cached(&sql).await?;
 
 		conn.execute_raw(&stmt, progress.params()).await.map(|_| ())

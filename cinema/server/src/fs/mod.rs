@@ -45,6 +45,18 @@ enum Entry {
 	},
 }
 
+impl Entry {
+	// not sure this should be here
+	pub fn should_ignore(&self) -> bool {
+		match self {
+			Self::Movie { poster, .. } => poster.is_none(),
+			Self::Series {
+				poster, seasons, ..
+			} => poster.is_none() || seasons.is_empty(),
+		}
+	}
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Season {
 	name: Option<String>,
@@ -131,10 +143,7 @@ pub(super) async fn changes_from_fs(
 				background,
 			} => {
 				let mut changed = false;
-				let updated_on = DateTime::from_std(created_on);
-				changes!(
-					changed, d_entry, name, poster, background, updated_on
-				);
+				changes!(changed, d_entry, name, poster, background);
 
 				let data::EntryData::Movie(movie) = &mut d_entry.data else {
 					unreachable!()
@@ -289,8 +298,8 @@ impl From<Entry> for data::Entry {
 						seasons: seasons.into_iter().map(Into::into).collect(),
 					}),
 					// will be calculated later
-					created_on: DateTime::from_std(latest_updated_on),
-					updated_on: DateTime::from_std(latest_updated_on),
+					created_on: created_on_to_datetime(latest_updated_on),
+					updated_on: created_on_to_datetime(latest_updated_on),
 					genres: vec![],
 					change: Change::Insert,
 				}
@@ -321,11 +330,19 @@ impl From<Episode> for data::Episode {
 			name: e.name,
 			original_name: None,
 			year: None,
-			created_on: DateTime::from_std(e.created_on),
+			created_on: created_on_to_datetime(e.created_on),
 			description: None,
 			duration: None,
 			change: Change::Insert,
 			progress: None,
 		}
+	}
+}
+
+fn created_on_to_datetime(created_on: SystemTime) -> DateTime {
+	if created_on == SystemTime::UNIX_EPOCH {
+		DateTime::now()
+	} else {
+		DateTime::from_std(created_on)
 	}
 }

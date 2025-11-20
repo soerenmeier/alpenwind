@@ -25,6 +25,14 @@ pub(super) async fn entries_from_fs(
 	movies_from_fs(cfg, &mut entries).await?;
 	series_from_fs(cfg, &mut entries).await?;
 
+	entries.retain(|_, e| {
+		let ignore = e.should_ignore();
+		if ignore {
+			eprintln!("ignoring entry {e:?}");
+		}
+		!ignore
+	});
+
 	Ok(entries)
 }
 

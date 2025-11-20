@@ -61,7 +61,7 @@ async fn task_tick(
 	// add change: Change::Updated or Inserted as needed
 
 	for change in changes {
-		apply_change(&cinema, change).await?;
+		apply_change(&cinema, change, cfg).await?;
 	}
 
 	trans.commit().await?;
@@ -69,7 +69,11 @@ async fn task_tick(
 	Ok(())
 }
 
-async fn apply_change(db: &CinemaDbWithConn<'_>, entry: Entry) -> Result<()> {
+async fn apply_change(
+	db: &CinemaDbWithConn<'_>,
+	entry: Entry,
+	cfg: &CinemaConf,
+) -> Result<()> {
 	match entry.change {
 		Change::Insert | Change::Update => {
 			// create a db entry
@@ -112,7 +116,11 @@ async fn apply_change(db: &CinemaDbWithConn<'_>, entry: Entry) -> Result<()> {
 			}
 		}
 		Change::Remove => {
-			db.delete_entry(&entry.id).await?;
+			if cfg.allow_deletes {
+				db.delete_entry(&entry.id).await?;
+			} else {
+				eprintln!("Skipping delete of entry {entry:?}");
+			}
 			// this should have delete all descendants
 			return Ok(());
 		}
