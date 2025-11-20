@@ -9,7 +9,7 @@ pub struct OnTerminate {
 
 impl OnTerminate {
 	/// resolved the future when the terminate fn was called
-	pub fn on_terminate(&mut self) -> prog::Changed {
+	pub fn on_terminate(&mut self) -> prog::Changed<'_> {
 		// make sure that we only listen until 1 get's received
 		self.rx.set_received_val(0);
 		self.rx.changed()

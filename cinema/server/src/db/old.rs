@@ -76,7 +76,7 @@ pub struct CinemaDb {
 }
 
 impl CinemaDb {
-	pub async fn new(db: &Database) -> Self {
+	pub async fn new(_db: &Database) -> Self {
 		let this = Self {
 			table: Table::new("cinema_old"),
 			table_progress: Table::new("cinema_progress_old"),

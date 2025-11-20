@@ -138,9 +138,9 @@ pub(super) async fn changes_from_fs(
 				name,
 				year,
 				duration,
-				created_on,
 				poster,
 				background,
+				..
 			} => {
 				let mut changed = false;
 				changes!(changed, d_entry, name, poster, background);

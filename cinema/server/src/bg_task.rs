@@ -10,7 +10,6 @@ use tokio::task::JoinHandle;
 use tokio::time::{self, Duration};
 
 use core_lib::server::OnTerminate;
-use tracing::info;
 
 #[cfg(debug_assertions)]
 const REFRESH_EVERY: Duration = Duration::from_secs(1 * 60);

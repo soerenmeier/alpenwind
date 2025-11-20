@@ -72,6 +72,7 @@ pub struct CinemaDbWithConn<'a> {
 	entries: TableWithConn<'a>,
 	seasons: TableWithConn<'a>,
 	episodes: TableWithConn<'a>,
+	#[allow(dead_code)]
 	media_files: TableWithConn<'a>,
 	entry_genres: TableWithConn<'a>,
 	progress: TableWithConn<'a>,
@@ -367,6 +368,7 @@ impl CinemaDbWithConn<'_> {
 	pub async fn movie_exists(&self, id: &UniqueId) -> Result<bool> {
 		#[derive(Debug, FromRow)]
 		struct EntryType {
+			#[allow(dead_code)]
 			id: UniqueId,
 			kind: i16,
 		}

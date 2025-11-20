@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use chuchi_postgres::time::DateTime;
 use chuchi_postgres::Database;
 use chuchi_postgres::UniqueId;
 

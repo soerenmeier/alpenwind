@@ -1,6 +1,4 @@
-use crate::api::data::{Entry, Progress};
 use crate::api::{Entries, EntriesReq, ProgressId, ProgressMsg, ProgressReq};
-use crate::data;
 use crate::db::{self, CinemaDb};
 use crate::error::{Error, Result};
 

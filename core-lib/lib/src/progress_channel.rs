@@ -95,7 +95,7 @@ impl Receiver {
 
 	/// When the future gets resolved this means that the val as increased from
 	/// the received val and the received val was updated.
-	pub fn changed(&mut self) -> Changed {
+	pub fn changed(&mut self) -> Changed<'_> {
 		Changed {
 			notified: self.inner.notify.notified(),
 			inner: &self.inner,
