@@ -4,6 +4,7 @@
 	const cl = getCore();
 	const currentOpts = cl.contextMenu.currentOpts;
 
+	// checkout ContextMenu.ts file for type info
 	let ctx = null;
 	let opts = [];
 	let pos = [];
@@ -26,6 +27,16 @@
 		ctx[2](id);
 	}
 
+	function positionBox(el, opts) {
+		const { x, y } = opts;
+
+		const maxX = window.innerWidth - el.offsetWidth;
+		const maxY = window.innerHeight - el.offsetHeight;
+
+		el.style.top = `${Math.min(y, maxY)}px`;
+		el.style.left = `${Math.min(x, maxX)}px`;
+	}
+
 	function onClick(e) {
 		if (e.target !== overlayEl) return;
 
@@ -36,13 +47,8 @@
 {#if ctx}
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<div
-		bind:this={overlayEl}
-		class="overlay abs-full"
-		style="--top: {pos[1]}px; --left: {pos[0]}px"
-		on:click={onClick}
-	>
-		<div class="box">
+	<div bind:this={overlayEl} class="overlay abs-full" on:click={onClick}>
+		<div class="box" use:positionBox={{ x: pos[0], y: pos[1] }}>
 			{#each opts as opt}
 				<button on:click={() => close(opt.id)}>{opt.text}</button>
 			{/each}
@@ -60,8 +66,6 @@
 
 	.box {
 		position: absolute;
-		top: var(--top);
-		left: var(--left);
 		background-color: var(--white);
 		border: 1px solid var(--gray);
 		border-radius: 5px;
