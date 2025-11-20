@@ -53,6 +53,8 @@
 		// meaning if you go back the correct scroll position will be shown
 		await tick();
 
+		// i think it might not work in prod?
+		console.log('tick happend scrolling to the top');
 		window.scrollTo({
 			top: 0,
 		});
@@ -107,7 +109,7 @@
 
 <div id="cinema" bind:this={contEl}>
 	<header>
-		<BackBtn href="/" onlyHref={true} />
+		<BackBtn href={searchValue ? '/cinema' : '/'} onlyHref={!searchValue} />
 
 		<div class="center">
 			<Search bind:value={searchValue}>
@@ -159,6 +161,7 @@
 							src={entry.poster()}
 							alt={entry.title()}
 							percent={entry.percent()}
+							lazy
 						/>
 						<div class="over">
 							<h4>{entry.title()}</h4>

@@ -83,7 +83,12 @@ class SearchFilter {
 	}
 
 	sort([aScore, ae]: [number, Entry], [bScore, be]: [number, Entry]): number {
-		if (!this.order) return sortToHigher(aScore, bScore);
+		if (!this.order) {
+			const scoreSort = sortToHigher(aScore, bScore);
+			if (scoreSort !== 0) return scoreSort;
+
+			return sortToHigher(ae.title(), be.title());
+		}
 
 		let prevOrder = 0;
 
@@ -105,7 +110,10 @@ class SearchFilter {
 
 		if (prevOrder !== 0) return prevOrder;
 
-		return sortToHigher(aScore, bScore);
+		prevOrder = sortToHigher(aScore, bScore);
+		if (prevOrder !== 0) return prevOrder;
+
+		return sortToHigher(ae.title(), be.title());
 	}
 
 	private _parse(s: string) {

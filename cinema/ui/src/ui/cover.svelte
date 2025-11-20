@@ -2,21 +2,21 @@
 	export let src;
 	export let alt = 'Cover';
 	export let percent = 0;
+	export let lazy = false;
 </script>
 
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 <figure class="cover" style:--percent={percent} on:click on:contextmenu>
-	<img {src} {alt}>
+	<img {src} {alt} loading={lazy ? 'lazy' : 'eager'} />
 </figure>
 
 <style>
 	.cover {
 		position: relative;
 		width: 100%;
-		background-image: var(--poster);
-		background-repeat: no-repeat;
-		background-size: cover;
-		background-position: center;
 		aspect-ratio: 0.63;
+		background-color: var(--gray);
 	}
 
 	img {
@@ -27,7 +27,7 @@
 	}
 
 	.cover::after {
-		content: "";
+		content: '';
 		position: absolute;
 		bottom: 0;
 		height: 3px;
