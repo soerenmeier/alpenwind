@@ -2,31 +2,39 @@
 	export let password;
 </script>
 
-<article on:click on:contextmenu>
-	<figure>
-		<img src={password.favicon()} alt={password.site}>
-	</figure>
-	<div class="texts">
-		<h3>{password.site}</h3>
-		<p class="user">{password.username}</p>
-	</div>
-</article>
+<button type="button" on:click on:contextmenu>
+	<span class="figure">
+		<img src={password.favicon()} alt={password.site} aria-hidden={true} />
+	</span>
+
+	<span class="texts">
+		<span class="title">{password.site}</span>
+		<span class="user">{password.username}</span>
+	</span>
+</button>
 
 <style>
-	article {
+	button {
 		display: flex;
 		padding: 7px 15px;
 		gap: 30px;
+		align-items: center;
 		border: 1px solid var(--dark-border-color);
 		border-radius: 8px;
-		align-items: center;
 		background-color: var(--gray);
 		cursor: pointer;
+		appearance: none;
+		text-align: left;
+		color: inherit;
 		transition: background-color 0.2s ease;
 	}
 
-	article:hover {
+	button:hover {
 		background-color: #2d2d2d;
+	}
+
+	.figure {
+		display: block;
 	}
 
 	img {
@@ -37,7 +45,11 @@
 		width: 100%;
 	}
 
-	h3 {
+	.texts span {
+		display: block;
+	}
+
+	.title {
 		font-weight: 500;
 		margin-bottom: -2px;
 	}
