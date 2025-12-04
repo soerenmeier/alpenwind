@@ -198,7 +198,7 @@
 			<Search bind:value={searchVal} />
 		</div>
 
-		<AddBtn on:click={onAddClick} />
+		<AddBtn ariaLabel="Passwort hinzufügen" on:click={onAddClick} />
 	</header>
 
 	<div class="list">
