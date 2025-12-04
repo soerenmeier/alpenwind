@@ -1,6 +1,10 @@
-<span class="add-btn" on:click>
+<script>
+	export let ariaLabel = 'add';
+</script>
+
+<button type="button" class="add-btn" on:click aria-label={ariaLabel}>
 	<span class="plus"></span>
-</span>
+</button>
 
 <style>
 	.add-btn {
@@ -13,6 +17,7 @@
 		border-right: none;
 		border-radius: 8px 0 0 8px;
 		cursor: pointer;
+		appearance: none;
 	}
 
 	.add-btn:hover {
@@ -42,6 +47,7 @@
 
 	.plus::after {
 		top: calc(100% / 2 - 1px);
+		left: 0;
 		width: 100%;
 		height: 2px;
 	}
