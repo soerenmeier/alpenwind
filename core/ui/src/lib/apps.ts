@@ -2,6 +2,7 @@ import { Core } from 'core-lib';
 import { apps as appsApi } from '../api/apps.js';
 import Settings from '../settings/app.js';
 import App from './App.js';
+import { sortToHigher } from 'chuchi-utils';
 
 export let apps: App[] = [];
 
@@ -70,4 +71,5 @@ export async function loadApps(cl: Core) {
 	apps.push(new Settings());
 	await Promise.all(apps.map(a => a.prepare(cl)));
 	apps.forEach(a => a.init(cl));
+	apps.sort((a, b) => sortToHigher(a.name(), b.name()));
 }
